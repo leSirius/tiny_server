@@ -13,13 +13,10 @@ import <iostream>;
 import <string_view>;
 import <vector>;
 
-import Config;
-import Utils;
-import Basekit;
+import config;
+import utils;
+import basekit;
 using namespace std;
-constexpr int MAX_EVENTS = 1024;
-constexpr int READ_BUFFER = config::BUF_SIZE;
-
 
 int main() {
     using namespace basekit;

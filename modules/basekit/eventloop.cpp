@@ -1,6 +1,6 @@
 module;
 
-module Basekit;
+module basekit;
 import <vector>;
 
 using namespace std;

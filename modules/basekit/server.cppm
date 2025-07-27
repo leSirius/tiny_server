@@ -1,15 +1,15 @@
 module;
 #include <unistd.h>
-export module Basekit :Server;
+export module basekit :server;
 import  <cerrno>;
 import  <functional>;
 import <unordered_map>;
-import Config;
-import :Acceptor;
-import :Socket;
-import :InetAddress;
+import config;
+import :acceptor;
+import :socket;
+import :inetAddress;
 import :Connection;
-import :EpollLoopChannel;
+import :epollLoopChannel;
 
 namespace basekit {
     export class Server {

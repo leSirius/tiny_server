@@ -2,13 +2,13 @@ module;
 #include <unistd.h>
 #include <sys/epoll.h>
 
-module Basekit;
+module basekit;
 import <functional>;
 import <iostream>;
 import <string_view>;
 import <vector>;
-import Utils;
-import Config;
+import utils;
+import config;
 
 using namespace std;
 
@@ -46,7 +46,6 @@ namespace basekit {
         ev.data.ptr = channel;
         ev.events = channel->getEvents();
 
-        println("{}", fd);
         if (!channel->getInEpoll()) {
             utils::errIf(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll add error");
             channel->putInEpoll();

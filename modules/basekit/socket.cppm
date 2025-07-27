@@ -4,12 +4,12 @@ module;
 
 #include <sys/socket.h>
 
-export module Basekit:Socket;
+export module basekit:socket;
 import <iostream>;
 import <string_view>;
 import  <utility>;
-import Utils;
-import :InetAddress;
+import utils;
+import :inetAddress;
 
 using namespace std;
 
@@ -23,6 +23,8 @@ namespace basekit {
         ~Socket();
 
         void bind(const InetAddress &addr) const;
+
+        void connect(const InetAddress &addr) const;
 
         void listen() const;
 
@@ -55,7 +57,7 @@ namespace basekit {
     Socket::~Socket() {
         if (fd != -1) {
             close(fd);
-            println("closed on ", fd);
+            println("closed fd {} ", fd);
         }
         fd = -1;
     }
@@ -67,6 +69,15 @@ namespace basekit {
         );
         println("bound to address: {}:{}", addr.getAddress(), addr.getPort());
     }
+
+    void Socket::connect(const InetAddress &addr) const {
+        utils::errIf(
+            ::connect(fd, addr.getReinter(), addr.getLen()) == -1,
+            "connect error"
+        );
+        println("connected to address: {}:{}", addr.getAddress(), addr.getPort());
+    }
+
 
     void Socket::listen() const {
         utils::errIf(

@@ -1,11 +1,13 @@
 module;
 #include <unistd.h>
-export module Basekit:Connection;
-import  <cerrno>;
+
+export module basekit:Connection;
+import <cerrno>;
 import <functional>;
-import Config;
-import :Socket;
-import :EpollLoopChannel;
+import config;
+import :socket;
+import :buffer;
+import :epollLoopChannel;
 
 using namespace std;
 
@@ -16,13 +18,15 @@ namespace basekit {
 
         ~Connection();
 
-        void echo(int sockFD) const;
+        void echo(int sockFD);
 
         void setDeleteCallback(function<void(Socket *)> cb);
 
     private:
         EventLoop *loop;
         Socket *sock;
+        string inBuffer{};
+        Buffer readBuffer{};
         Channel *channel;
         function<void(Socket *)> deleteConnectionCB;
     };
@@ -39,14 +43,13 @@ namespace basekit {
         delete sock;
     }
 
-    void Connection::echo(int sockFD) const {
+    void Connection::echo(int sockFD) {
         constexpr auto READ_BUFFER = config::BUF_SIZE;
         char buf[READ_BUFFER]{};
         while (true) {
             const auto readBytes = read(sockFD, buf, READ_BUFFER);
             if (readBytes > 0) {
-                println("Received from fd: {} ", sockFD);
-                write(sockFD, buf, readBytes);
+                readBuffer.append(buf);
             } else if (readBytes == 0) {
                 deleteConnectionCB(sock);
                 println("EOF, fd {} disconnected", sockFD);
@@ -54,11 +57,13 @@ namespace basekit {
             } else if (readBytes == -1) {
                 if (errno == EINTR) {
                     println("interrupted, continue");
-                    continue; // 中断后重试
                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    // 非阻塞模式下，没有更多数据可读这
+                    println("received from {}: {}", sockFD, readBuffer.c_str());
+                    utils::errIf(write(sockFD, readBuffer.c_str(), readBuffer.size()) == -1, "server write error");
+                    readBuffer.clear();
                     break;
                 } else if (errno == ECONNRESET) {
+                    readBuffer.clear();
                     deleteConnectionCB(sock);
                     println("client sent RST, fd {} disconnected", sockFD);
                     break;
@@ -68,6 +73,7 @@ namespace basekit {
                     break;
                 }
             }
+            bzero(buf, sizeof(buf));
         }
     }
 

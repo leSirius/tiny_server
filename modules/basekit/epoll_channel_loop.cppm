@@ -1,7 +1,7 @@
 module;
 #include <sys/epoll.h>
 
-export module Basekit:EpollLoopChannel;
+export module basekit:epollLoopChannel;
 import  <cstdint>;
 import  <functional>;
 import  <vector>;

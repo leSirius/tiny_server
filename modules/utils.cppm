@@ -2,12 +2,12 @@ module;
 #include <arpa/inet.h>
 #include <sys/un.h>
 
-export module Utils;
+export module utils;
 import  <cstdlib>;
 import  <iostream>;
 import  <string_view>;
 
-import Config;
+import config;
 
 using namespace std;
 

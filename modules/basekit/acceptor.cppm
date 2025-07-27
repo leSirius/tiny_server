@@ -1,12 +1,12 @@
 module;
 
-export module Basekit:Acceptor;
+export module basekit:acceptor;
 import <functional>;
 
-import Config;
-import :EpollLoopChannel;
-import :InetAddress;
-import :Socket;
+import config;
+import :epollLoopChannel;
+import :inetAddress;
+import :socket;
 
 using namespace std;
 

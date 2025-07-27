@@ -15,6 +15,7 @@ set(COMMON_CXX_MODULES_SOURCES
         modules/config.cppm
         modules/basekit/acceptor.cppm
         modules/basekit/basekit.cppm
+        modules/basekit/buffer.cppm
         modules/basekit/connection.cppm
         modules/basekit/epoll_channel_loop.cppm
         modules/basekit/inet_address.cppm

@@ -2,9 +2,9 @@ module;
 #include <string_view>
 #include <arpa/inet.h>
 
-export module Basekit:InetAddress;
+export module basekit:inetAddress;
 import <string>;
-import Utils;
+import utils;
 
 using namespace std;
 
