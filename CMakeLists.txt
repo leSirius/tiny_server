@@ -21,6 +21,7 @@ set(COMMON_CXX_MODULES_SOURCES
         modules/basekit/inet_address.cppm
         modules/basekit/server.cppm
         modules/basekit/socket.cppm
+        modules/basekit/threadpool.cppm
 )
 
 # Define common private sources
@@ -39,3 +40,8 @@ target_sources(tiny_server PRIVATE ${COMMON_PRIVATE_SOURCES})
 add_executable(tiny_client client.cpp)
 target_sources(tiny_client PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
 target_sources(tiny_client PRIVATE ${COMMON_PRIVATE_SOURCES})
+
+# test threadpool
+add_executable(test_threadpool thread_pool_test.cpp)
+target_sources(test_threadpool PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
+target_sources(test_threadpool PRIVATE ${COMMON_PRIVATE_SOURCES})

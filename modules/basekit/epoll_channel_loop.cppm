@@ -5,6 +5,7 @@ export module basekit:epollLoopChannel;
 import  <cstdint>;
 import  <functional>;
 import  <vector>;
+import :threadpool;
 
 using namespace std;
 
@@ -36,8 +37,11 @@ namespace basekit {
 
         void updateChannel(Channel *ch) const;
 
+        void addThread(function<void()> func);
+
     private:
         Epoll *ep{nullptr};
+        ThreadPool threadPool;
         bool quit{false};
     };
 

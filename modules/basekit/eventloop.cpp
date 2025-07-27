@@ -1,6 +1,9 @@
+#include <utility>
+
 module;
 
 module basekit;
+import <functional>;
 import <vector>;
 
 using namespace std;
@@ -24,5 +27,9 @@ namespace basekit {
 
     void EventLoop::updateChannel(Channel *ch) const {
         ep->updateChannel(ch);
+    }
+
+    void EventLoop::addThread(function<void()> func) {
+        threadPool.add(std::move(func));
     }
 }

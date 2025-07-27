@@ -45,6 +45,7 @@ namespace basekit {
     }
 
     void Channel::handleEvent() const {
-        callback();
+        loop->addThread(callback);
+        // callback();
     }
 }
