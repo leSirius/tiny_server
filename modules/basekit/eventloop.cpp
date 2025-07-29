@@ -19,7 +19,7 @@ namespace basekit {
 
     void EventLoop::loop() const {
         while (!quit) {
-            for (vector<Channel *> chs{ep->poll()}; const auto &ch: chs) {
+            for (vector chs{ep->poll()}; const auto &ch: chs) {
                 ch->handleEvent();
             }
         }

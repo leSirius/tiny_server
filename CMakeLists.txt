@@ -41,7 +41,7 @@ add_executable(tiny_client client.cpp)
 target_sources(tiny_client PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
 target_sources(tiny_client PRIVATE ${COMMON_PRIVATE_SOURCES})
 
-# test threadpool
-add_executable(test_threadpool thread_pool_test.cpp)
-target_sources(test_threadpool PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
-target_sources(test_threadpool PRIVATE ${COMMON_PRIVATE_SOURCES})
+# test server
+add_executable(test test.cpp)
+target_sources(test PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
+target_sources(test PRIVATE ${COMMON_PRIVATE_SOURCES})

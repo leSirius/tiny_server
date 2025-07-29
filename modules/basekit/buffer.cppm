@@ -1,6 +1,6 @@
 module ;
 
-#include <stdio.h>
+#include <cstdio>
 
 export module basekit:buffer;
 
@@ -26,6 +26,8 @@ namespace basekit {
 
         void getLine();
 
+        void setBuf(string_view _buf);
+
     private:
         string buf{};
     };
@@ -50,5 +52,10 @@ namespace basekit {
     void Buffer::getLine() {
         buf.clear();
         getline(cin, buf);
+    }
+
+    void Buffer::setBuf(const string_view _buf) {
+        clear();
+        append(_buf);
     }
 }

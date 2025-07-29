@@ -1,14 +1,15 @@
 module;
 
 export module basekit:threadpool;
-import  <functional>;
+import <functional>;
+import <future>;
+import <iostream>;
 import <mutex>;
-import  <queue>;
+import <queue>;
 import <thread>;
-import  <vector>;
+import <vector>;
 
 import config;
-#include <print>
 
 
 using namespace std;
@@ -20,7 +21,8 @@ namespace basekit {
 
         ~ThreadPool();
 
-        void add(std::function<void()>);
+        template<class F, class... Args>
+        future<invoke_result_t<F, Args...> > add(F &&f, Args &&... args);
 
     private:
         vector<thread> threads;
@@ -61,11 +63,29 @@ namespace basekit {
         }
     }
 
-    void ThreadPool::add(function<void()> func) { {
+    template<typename F, typename... Args>
+    future<invoke_result_t<F, Args...> > ThreadPool::add(F &&f, Args &&... args) {
+        using ReturnType = invoke_result_t<F, Args...>;
+        auto task = make_shared<packaged_task<ReturnType()> >(
+            [f = std::forward<F>(f), args = make_tuple(forward<Args>(args)...)]() mutable {
+                return apply(std::move(f), std::move(args));
+            }
+        );
+        future<ReturnType> res = task->get_future(); {
             unique_lock lock(tasks_mtx);
-            if (stop) { throw std::runtime_error("ThreadPool already stop, can't add task any more"); }
-            tasks.emplace(std::move(func));
+            if (stop) { throw std::runtime_error("enqueue on stopped ThreadPool"); }
+            tasks.emplace([task]() { (*task)(); });
         }
         cv.notify_one();
+        return res;
     }
 }
+
+
+// void ThreadPool::add(function<void()> func) { {
+//         unique_lock lock(tasks_mtx);
+//         if (stop) { throw std::runtime_error("ThreadPool already stop, can't add task any more"); }
+//         tasks.emplace(std::move(func));
+//     }
+//     cv.notify_one();
+// }
