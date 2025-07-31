@@ -11,17 +11,17 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++abi")
 
 # Define common C++ module sources
 set(COMMON_CXX_MODULES_SOURCES
-        modules/utils.cppm
-        modules/config.cppm
         modules/basekit/acceptor.cppm
         modules/basekit/basekit.cppm
         modules/basekit/buffer.cppm
-        modules/basekit/connection.cppm
         modules/basekit/epoll_channel_loop.cppm
         modules/basekit/inet_address.cppm
-        modules/basekit/server.cppm
         modules/basekit/socket.cppm
+        modules/basekit/tcp_connection.cppm
+        modules/basekit/tcp_server.cppm
         modules/basekit/threadpool.cppm
+        modules/config.cppm
+        modules/utils.cppm
 )
 
 # Define common private sources

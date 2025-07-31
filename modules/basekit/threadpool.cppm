@@ -25,9 +25,9 @@ namespace basekit {
         future<invoke_result_t<F, Args...> > add(F &&f, Args &&... args);
 
     private:
-        vector<thread> threads;
+        vector<jthread> threads;
         queue<function<void()> > tasks;
-        mutex tasks_mtx;
+        mutex taskMtx;
         condition_variable cv;
         bool stop{false};
     };
@@ -35,10 +35,10 @@ namespace basekit {
     ThreadPool::ThreadPool(const unsigned int size) {
         threads.reserve(size);
         for (int i = 0; i < size; ++i) {
-            threads.emplace_back([this, i]() {
+            threads.emplace_back([this]() {
                 while (true) {
                     function<void()> task; {
-                        unique_lock lock(tasks_mtx);
+                        unique_lock lock(taskMtx);
                         cv.wait(lock, [this]() {
                             return stop || !tasks.empty();
                         });
@@ -47,20 +47,16 @@ namespace basekit {
                         tasks.pop();
                     }
                     task();
-                    println("from thread {}", i);
                 }
             });
         }
     }
 
     ThreadPool::~ThreadPool() { {
-            unique_lock lock(tasks_mtx);
+            unique_lock lock(taskMtx);
             stop = true;
         }
         cv.notify_all();
-        for (auto &thread: threads) {
-            if (thread.joinable()) { thread.join(); }
-        }
     }
 
     template<typename F, typename... Args>
@@ -72,7 +68,7 @@ namespace basekit {
             }
         );
         future<ReturnType> res = task->get_future(); {
-            unique_lock lock(tasks_mtx);
+            unique_lock lock(taskMtx);
             if (stop) { throw std::runtime_error("enqueue on stopped ThreadPool"); }
             tasks.emplace([task]() { (*task)(); });
         }
@@ -80,12 +76,3 @@ namespace basekit {
         return res;
     }
 }
-
-
-// void ThreadPool::add(function<void()> func) { {
-//         unique_lock lock(tasks_mtx);
-//         if (stop) { throw std::runtime_error("ThreadPool already stop, can't add task any more"); }
-//         tasks.emplace(std::move(func));
-//     }
-//     cv.notify_one();
-// }

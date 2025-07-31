@@ -22,9 +22,9 @@ namespace basekit {
 
         [[nodiscard]] const char *c_str() const;
 
-        void clear();
+        void clearBuf();
 
-        void getLine();
+        void getLineBuf();
 
         void setBuf(string_view _buf);
 
@@ -45,17 +45,17 @@ namespace basekit {
         return buf.c_str();
     }
 
-    void Buffer::clear() {
+    void Buffer::clearBuf() {
         buf.clear();
     }
 
-    void Buffer::getLine() {
-        buf.clear();
+    void Buffer::getLineBuf() {
+        clearBuf();
         getline(cin, buf);
     }
 
     void Buffer::setBuf(const string_view _buf) {
-        clear();
+        clearBuf();
         append(_buf);
     }
 }

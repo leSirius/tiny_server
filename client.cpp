@@ -8,13 +8,12 @@ import utils;
 import basekit;
 using namespace std;
 
-
 void input(int socketFD) {
     using namespace basekit;
     Buffer sendBuffer, recvBuffer;
     constexpr int bufSize = config::BUF_SIZE;
     while (true) {
-        sendBuffer.getLine();
+        sendBuffer.getLineBuf();
         const auto writeBytes = write(socketFD, sendBuffer.c_str(), sendBuffer.size());
         utils::errIf(writeBytes == -1, "client sending message error");
         ssize_t alreadyRead = 0;
@@ -36,7 +35,7 @@ void input(int socketFD) {
             }
             bzero(buf, sizeof(buf));
         }
-        recvBuffer.clear();
+        recvBuffer.clearBuf();
     }
 }
 
@@ -71,9 +70,9 @@ int main() {
 //             println("read from server {} bytes: {}", replyBytes, buf);
 //         } else if (replyBytes == 0) {
 //             println("server fd {} disconnected", socketFD);
-//             close(socketFD);
+//             handleClose(socketFD);
 //         } else {
-//             close(socketFD);
+//             handleClose(socketFD);
 //             utils::errIf(true, "error occurred when  reading from server ");
 //         }
 //     }

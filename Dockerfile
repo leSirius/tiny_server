@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     openssh-server \
     rsync \
+    iproute2 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /var/run/sshd

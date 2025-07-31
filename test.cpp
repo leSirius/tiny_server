@@ -1,8 +1,10 @@
 #include <unistd.h>
 
 import <cstring>;
-#include <functional>
+import  <functional>;
 import <iostream>;
+import <thread>;
+import <vector>;
 
 import basekit;
 import config;
@@ -28,25 +30,25 @@ void oneClient(const int msgs, const int wait) {
             write(sockFD, sendBuffer.c_str(), sendBuffer.size()) == -1,
             "socket already disconnected, can't write any more!"
         );
-        break;
-    }
-    int already_read = 0;
-    char buf[config::BUF_SIZE]{}; //这个buf大小无所谓
-    while (true) {
-        if (const ssize_t read_bytes = read(sockFD, buf, sizeof(buf)); read_bytes > 0) {
-            readBuffer.append(buf);
-            already_read += read_bytes;
-        } else if (read_bytes == 0) {
-            printf("server disconnected!");
-            exit(EXIT_SUCCESS);
+
+        int already_read = 0;
+        char buf[config::BUF_SIZE]{}; //这个buf大小无所谓
+        while (true) {
+            if (const ssize_t read_bytes = read(sockFD, buf, sizeof(buf)); read_bytes > 0) {
+                readBuffer.append(buf);
+                already_read += read_bytes;
+            } else if (read_bytes == 0) {
+                printf("server disconnected!");
+                exit(EXIT_SUCCESS);
+            }
+            if (already_read >= sendBuffer.size()) {
+                println("count: {}, message from server: {}", count++, readBuffer.c_str());
+                break;
+            }
+            bzero(&buf, sizeof(buf));
         }
-        if (already_read >= sendBuffer.size()) {
-            println("count: {}, message from server: {}", count++, readBuffer.c_str());
-            break;
-        }
-        bzero(&buf, sizeof(buf));
+        readBuffer.clearBuf();
     }
-    readBuffer.clear();
 }
 
 int main(const int argc, char *argv[]) {
@@ -75,12 +77,15 @@ int main(const int argc, char *argv[]) {
         }
     }
 
-    ThreadPool poll{static_cast<unsigned int>(threads)};
-    const auto func = [msgs, wait]() {
+    ThreadPool pool{static_cast<unsigned int>(threads)};
+
+    auto func = [msgs, wait]() {
         oneClient(msgs, wait);
     };
+    vector<jthread> jthreads{};
     for (int i = 0; i < threads; ++i) {
-        poll.add(func);
+        // pool.add(func);
+        jthreads.emplace_back(func);
     }
     return 0;
 }

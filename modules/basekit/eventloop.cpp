@@ -29,7 +29,7 @@ namespace basekit {
         ep->updateChannel(ch);
     }
 
-    void EventLoop::addThread(function<void()> func) {
-        threadPool.add(std::move(func));
-    }
+    // void EventLoop::addThread(function<void()> func) {
+    //     threadPool.add(std::move(func));
+    // }
 }

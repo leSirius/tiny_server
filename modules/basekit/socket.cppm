@@ -57,9 +57,8 @@ namespace basekit {
     Socket::~Socket() {
         if (fd != -1) {
             close(fd);
-            println("closed fd {} ", fd);
+            fd = -1;
         }
-        fd = -1;
     }
 
     void Socket::bind(const InetAddress &addr) const {

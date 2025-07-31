@@ -34,7 +34,7 @@ namespace basekit {
         activeChannels.reserve(numFds);
         for (int i = 0; i < numFds; ++i) {
             auto *ch = static_cast<Channel *>(eventVec[i].data.ptr);
-            ch->setRevents(eventVec[i].events);
+            ch->setReady(eventVec[i].events);
             activeChannels.push_back(ch);
         }
         return activeChannels;
@@ -45,12 +45,17 @@ namespace basekit {
         epoll_event ev{};
         ev.data.ptr = channel;
         ev.events = channel->getEvents();
-
         if (!channel->getInEpoll()) {
             utils::errIf(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll add error");
-            channel->putInEpoll();
+            channel->setInEpoll(true);
         } else {
             utils::errIf(epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &ev) == -1, "epoll modify error");
         }
+    }
+
+    void Epoll::deleteChannel(Channel *channel) const {
+        const int fd = channel->getFd();
+        utils::errIf(epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr) == -1, "epoll delete error");
+        channel->setInEpoll(false);
     }
 }

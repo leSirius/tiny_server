@@ -13,7 +13,7 @@ namespace basekit {
     public:
         InetAddress() = default;
 
-        InetAddress(string_view ip, uint16_t port);
+        InetAddress(string_view ip, int port);
 
         [[nodiscard]] const sockaddr_in *getPointer() const;
 
@@ -34,10 +34,10 @@ namespace basekit {
         socklen_t addrLen{sizeof(addr)};
     };
 
-    InetAddress::InetAddress(const string_view ip, const uint16_t port) {
+    InetAddress::InetAddress(const string_view ip, const int port) {
         addr.sin_family = AF_INET;
         utils::errIf(inet_pton(AF_INET, ip.data(), &addr.sin_addr) != 1, "failed to bind address");
-        addr.sin_port = htons(port);
+        addr.sin_port = htons(static_cast<uint16_t>(port));
         addrLen = sizeof(addr);
     }
 

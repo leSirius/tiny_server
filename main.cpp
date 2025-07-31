@@ -9,6 +9,7 @@
 
 import <array>;
 import <csignal>;
+import <functional>;
 import <iostream>;
 import <string_view>;
 import <vector>;
@@ -16,12 +17,37 @@ import <vector>;
 import config;
 import utils;
 import basekit;
+
 using namespace std;
 
 int main() {
     using namespace basekit;
-    EventLoop eventLoop{};
-    Server server(&eventLoop);
-    eventLoop.loop();
+    ServerTCP server(config::ADDRESS, config::PORT);
+    server.setMessageCB([](ConnectionTCP *conn) {
+        const auto recvMsg = conn->getReadBuffer()->c_str();
+        println("Message from clientID {} is {}", conn->getID(), recvMsg);
+        conn->sendMsg(recvMsg);
+    });
+    server.start();
     return 0;
 }
+
+// int main() {
+//     using namespace basekit;
+//
+//     EventLoop loop{};
+//     ServerTCP server(&loop);
+//     server.setConnectionCB([](ConnectionTCP *conn) {
+//         conn->connRead();
+//         if (conn->getState() == ConnectionTCP::State::Closed) {
+//             conn->handleClose();
+//             return;
+//         }
+//         println("Message from client {} : {}", conn->getSocket()->getFd(), conn->readBufferContent());
+//         conn->setSendBuffer(conn->readBufferContent());
+//         conn->connWrite();
+//     });
+//
+//     loop.loop();
+//     return 0;
+// }
