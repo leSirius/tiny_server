@@ -2,9 +2,11 @@ module;
 #include <sys/epoll.h>
 
 export module basekit:epollLoopChannel;
-import  <cstdint>;
-import  <functional>;
-import  <vector>;
+import <cstdint>;
+import <functional>;
+import <memory>;
+import <vector>;
+
 import :threadpool;
 
 using namespace std;
@@ -35,54 +37,77 @@ namespace basekit {
 
         ~EventLoop();
 
-        void loop() const;
+        void loop();
 
         void updateChannel(Channel *ch) const;
 
-        // void addThread(function<void()> func);
+        void deleteChannel(Channel *ch) const;
+
+        void doToDoList();
+
+        void queueFunc(function<void()> func);
+
+        [[nodiscard]] bool isInLoopThread() const;
+
+        void handleRead() const;
+
+        void runOneFunc(const function<void()> &func);
 
     private:
-        Epoll *ep{nullptr};
+        unique_ptr<Epoll> poller{};
         bool quit{false};
+        vector<function<void()> > toDoList;
+        mutex mtx;
+        int wakeUpfD;
+        unique_ptr<Channel> wakeUpChannel;
+        bool callingFunc{false};
+        pid_t threadID{0};
     };
 
     class Channel {
-    private:
-        EventLoop *loop{};
-        int fd;
-        uint32_t events{};
-        uint32_t ready{};
-        bool inEpoll{false};
-        function<void()> readCallback{};
-        function<void()> writeCallback{};
-
     public:
         Channel(EventLoop *_loop, int _fd);
 
         ~Channel();
 
-        void enableReading();
+        void handleEvent() const;
+
+        void handleEventWithGuard() const;
 
         void enableET();
 
+        void enableRead();
+
+        void enableWrite();
+
         [[nodiscard]] int getFd() const;
 
-        [[nodiscard]] uint32_t getEvents() const;
+        [[nodiscard]] uint32_t getListenEvents() const;
 
-        [[nodiscard]] uint32_t getReady() const;
+        [[nodiscard]] uint32_t getReadyEvents() const;
 
-        [[nodiscard]] bool getInEpoll() const;
+        [[nodiscard]] bool isInEpoll() const;
 
         void setInEpoll(bool _in);
 
-        void setReady(uint32_t);
+        void setReadyEvents(uint32_t);
 
         void setReadCallback(function<void()> r_cb);
 
         void setWriteCallback(function<void()> w_cb);
 
-        void handleEvent() const;
+        void tie(const std::shared_ptr<void> &ptr);
 
-        // void setUseThreadPool(bool _use);
+    private:
+        EventLoop *loop{};
+        int fd;
+        uint32_t listenEvents{};
+        uint32_t readyEvents{};
+        bool inEpoll{false};
+        function<void()> readCallback;
+        function<void()> writeCallback;
+
+        bool tied{false};
+        std::weak_ptr<void> tiePtr;
     };
 }

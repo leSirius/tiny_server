@@ -13,20 +13,10 @@ import :socket;
 import :inetAddress;
 import :tcpConnection;
 import :epollLoopChannel;
-
+import :currentThread;
 
 namespace basekit {
     export class ServerTCP {
-    private:
-        unique_ptr<EventLoop> mainReactor{nullptr};
-        vector<unique_ptr<EventLoop> > subReactors;
-        unique_ptr<Acceptor> acceptor;
-        unordered_map<int, unique_ptr<ConnectionTCP> > connectionMap{};
-        unique_ptr<ThreadPool> threadPool{};
-        function<void(ConnectionTCP *)> onConnectCB{};
-        function<void(ConnectionTCP *)> onMessageCB{};
-        int nextConnID{1};
-
     public:
         ServerTCP(string_view IP, int port);
 
@@ -36,20 +26,32 @@ namespace basekit {
 
         // explicit TCPServer(EventLoop *);
 
-        void handleNewConnection(int fd);
+        void handleNewConnect(int fd);
 
-        void handleClose(int sockFD);
+        void handleClose(ConnectionTCP::CallbackParam conn);
 
-        void setConnectionCB(function<void(ConnectionTCP *)> fn);
+        void handleCloseInLoop(ConnectionTCP::CallbackParam conn);
 
-        void setMessageCB(function<void(ConnectionTCP *)> fn);
+        void setConnectCB(ConnectionTCP::CallBackType fn);
+
+        void setMessageCB(ConnectionTCP::CallBackType fn);
+
+    private:
+        unique_ptr<EventLoop> mainReactor{nullptr};
+        vector<unique_ptr<EventLoop> > subReactors;
+        unique_ptr<Acceptor> acceptor;
+        unordered_map<int, shared_ptr<ConnectionTCP> > connectionMap{};
+        unique_ptr<ThreadPool> threadPool{};
+        ConnectionTCP::CallBackType onConnectCB;
+        ConnectionTCP::CallBackType onMessageCB;
+        int nextConnID{1};
     };
 
-    ServerTCP::ServerTCP(string_view IP, int port) {
+    ServerTCP::ServerTCP(const string_view IP, const int port) {
         mainReactor = make_unique<EventLoop>();
         acceptor = make_unique<Acceptor>(mainReactor.get(), IP, port);
-        acceptor->setNewConnectCB([this](const int fd) { handleNewConnection(fd); });
-        unsigned int cores = config::CPU_CORES;
+        acceptor->setNewConnectCB([this](const int fd) { this->handleNewConnect(fd); });
+        const auto cores = config::CPU_CORES;
         threadPool = std::make_unique<ThreadPool>(cores);
         for (size_t i = 0; i < cores; ++i) {
             auto sub_reactor = make_unique<EventLoop>();
@@ -66,28 +68,35 @@ namespace basekit {
         mainReactor->loop();
     }
 
-    void ServerTCP::handleNewConnection(const int fd) {
+    void ServerTCP::handleNewConnect(const int fd) {
         assert(fd != -1);
         const auto rand = fd % subReactors.size();
-        auto conn = make_unique<ConnectionTCP>(nextConnID, fd, subReactors[rand].get());
+        auto conn = make_shared<ConnectionTCP>(nextConnID, fd, subReactors[rand].get());
+        conn->setConnectCB(onConnectCB);
         conn->setMessageCB(onMessageCB);
-        conn->setCloseCB([this, fd]() { this->handleClose(fd); });
+        conn->setCloseCB([this](ConnectionTCP::CallbackParam c) { this->handleClose(c); });
         connectionMap[fd] = std::move(conn);
+        connectionMap[fd]->establishConnection();
         nextConnID = nextConnID == 1001 ? 1 : nextConnID + 1;
     }
 
-    void ServerTCP::handleClose(const int sockFD) {
-        if (connectionMap.contains(sockFD)) {
-            connectionMap.erase(sockFD);
-            close(sockFD);
-        }
+    void ServerTCP::handleClose(ConnectionTCP::CallbackParam conn) {
+        println("CurrentThread: {},  TcpServer::HandleClose", currentThread::getTid());
+        mainReactor->runOneFunc([this, conn]() { this->handleCloseInLoop(conn); });
     }
 
-    void ServerTCP::setConnectionCB(function<void(ConnectionTCP *)> fn) {
-        onConnectCB = std::move(fn);
+    void ServerTCP::handleCloseInLoop(ConnectionTCP::CallbackParam conn) {
+        println(
+            "CurrentThread: {} TcpServer::HandleCloseInLoop - Remove connection id: {} and fd {}",
+            currentThread::getTid(), conn->getID(), conn->getFD()
+        );
+        const auto it = connectionMap.find(conn->getFD());
+        assert(it != connectionMap.end());
+        connectionMap.erase(it);
+        EventLoop *loop = conn->getLoop();
+        loop->queueFunc([conn]() { conn->destructConnection(); });
     }
 
-    void ServerTCP::setMessageCB(function<void(ConnectionTCP *)> fn) {
-        onMessageCB = std::move(fn);
-    }
+    void ServerTCP::setConnectCB(ConnectionTCP::CallBackType fn) { onConnectCB = std::move(fn); }
+    void ServerTCP::setMessageCB(ConnectionTCP::CallBackType fn) { onMessageCB = std::move(fn); }
 }

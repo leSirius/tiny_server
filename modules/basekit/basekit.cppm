@@ -8,3 +8,4 @@ export import :tcpServer;
 export import :socket;
 export import :buffer;
 export import :threadpool;
+export import :currentThread;

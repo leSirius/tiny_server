@@ -53,7 +53,7 @@ void oneClient(const int msgs, const int wait) {
 
 int main(const int argc, char *argv[]) {
     int threads = 100;
-    int msgs = 100;
+    int msgs = 1;
     int wait = 0;
     int o;
     const auto optString = "t:m:w:";

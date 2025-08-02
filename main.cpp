@@ -1,11 +1,4 @@
-#include <cstdio>
-#include <fcntl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/epoll.h>
 #include <sys/socket.h>
-#include <sys/un.h>
 
 import <array>;
 import <csignal>;
@@ -19,35 +12,53 @@ import utils;
 import basekit;
 
 using namespace std;
+using namespace basekit;
 
-int main() {
-    using namespace basekit;
-    ServerTCP server(config::ADDRESS, config::PORT);
-    server.setMessageCB([](ConnectionTCP *conn) {
-        const auto recvMsg = conn->getReadBuffer()->c_str();
-        println("Message from clientID {} is {}", conn->getID(), recvMsg);
-        conn->sendMsg(recvMsg);
-    });
-    server.start();
-    return 0;
+class EchoServer {
+public:
+    EchoServer(string_view ip, int port);
+
+    ~EchoServer() = default;
+
+    void start() const;
+
+    static void onConnect(const shared_ptr<ConnectionTCP> &conn);
+
+    static void onMessage(const shared_ptr<ConnectionTCP> &conn);
+
+private:
+    ServerTCP server;
+};
+
+EchoServer::EchoServer(const string_view ip, const int port): server(ip, port) {
+    server.setConnectCB([this](ConnectionTCP::CallbackParam conn) { this->onConnect(conn); });
+    server.setMessageCB([this](ConnectionTCP::CallbackParam conn) { this->onMessage(conn); });
 }
 
-// int main() {
-//     using namespace basekit;
-//
-//     EventLoop loop{};
-//     ServerTCP server(&loop);
-//     server.setConnectionCB([](ConnectionTCP *conn) {
-//         conn->connRead();
-//         if (conn->getState() == ConnectionTCP::State::Closed) {
-//             conn->handleClose();
-//             return;
-//         }
-//         println("Message from client {} : {}", conn->getSocket()->getFd(), conn->readBufferContent());
-//         conn->setSendBuffer(conn->readBufferContent());
-//         conn->connWrite();
-//     });
-//
-//     loop.loop();
-//     return 0;
-// }
+void EchoServer::start() const { server.start(); }
+
+void EchoServer::onConnect(ConnectionTCP::CallbackParam conn) {
+    const int clientFD = conn->getFD();
+    InetAddress addr;
+    getpeername(clientFD, addr.getReinterCC(), addr.getLenPtr());
+    println(
+        "thread {} [fd#{}] from {}:{}",
+        currentThread::getTid(), clientFD, addr.getAddress(), addr.getPort()
+    );
+}
+
+void EchoServer::onMessage(ConnectionTCP::CallbackParam conn) {
+    if (conn->getState() == ConnectionTCP::State::Connected) {
+        const auto msg = conn->getRecvContent();
+        println("thread: {} Message from client: ", currentThread::getTid(), msg);
+        conn->sendMsg(msg);
+        conn->handleClose();
+    }
+}
+
+int main(const int argc, char *argv[]) {
+    const int port = argc == 2 ? stoi(argv[1]) : config::PORT;
+    const EchoServer echo(config::ADDRESS, port);
+    echo.start();
+    return 0;
+}

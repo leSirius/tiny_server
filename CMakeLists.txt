@@ -20,6 +20,7 @@ set(COMMON_CXX_MODULES_SOURCES
         modules/basekit/tcp_connection.cppm
         modules/basekit/tcp_server.cppm
         modules/basekit/threadpool.cppm
+        modules/basekit/current_thread.cppm
         modules/config.cppm
         modules/utils.cppm
 )
@@ -29,6 +30,7 @@ set(COMMON_PRIVATE_SOURCES
         modules/basekit/epoll.cpp
         modules/basekit/eventloop.cpp
         modules/basekit/channel.cpp
+        modules/basekit/current_thread.cpp
 )
 
 # Tiny Server

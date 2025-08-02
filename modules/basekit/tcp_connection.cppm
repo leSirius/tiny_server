@@ -10,35 +10,39 @@ import config;
 import :socket;
 import :buffer;
 import :epollLoopChannel;
+import :currentThread;
 
 using namespace std;
 
 namespace basekit {
-    export class ConnectionTCP {
+    export class ConnectionTCP : public enable_shared_from_this<ConnectionTCP> {
     public:
-        enum class State {
-            Invalid,
-            Connected,
-            Disconnected,
-        };
+        using CallbackParam = const shared_ptr<ConnectionTCP> &;
+        using CallBackType = function<void(CallbackParam)>;
+
+        enum class State { Invalid, Connected, Disconnected };
 
         ConnectionTCP(int id, int fd, EventLoop *_loop);
 
         ~ConnectionTCP();
 
-        void setMessageCB(function<void(ConnectionTCP *)> callback);
+        void establishConnection();
 
-        void setCloseCB(function<void()> const &callback);
+        void destructConnection();
+
+        void setConnectCB(CallBackType cb);
+
+        void setMessageCB(CallBackType cb);
+
+        void setCloseCB(CallBackType cb);
 
         void setSendBuffer(string_view _buffer);
 
         [[nodiscard]] const Buffer *getSendBuffer() const;
 
-        [[nodiscard]] const Buffer *getReadBuffer() const;
+        [[nodiscard]] const Buffer *getRecvBuffer() const;
 
-        void readToRBuf();
-
-        void writeFromSBuf();
+        [[nodiscard]] string getRecvContent() const;
 
         void sendMsg(string_view msg);
 
@@ -60,12 +64,17 @@ namespace basekit {
         State state{State::Invalid};
         EventLoop *loop;
         Channel channel;
-        Buffer readBuffer{};
+        Buffer recvBuffer{};
         Buffer sendBuffer{};
-        function<void(ConnectionTCP *)> onMessageCB;
-        function<void()> onCloseCB;
+        CallBackType onConnectCB;
+        CallBackType onMessageCB;
+        CallBackType onCloseCB;
 
         void setState(State _state);
+
+        void readToRBuf();
+
+        void writeFromSBuf();
 
         void readNonBlock();
 
@@ -77,24 +86,39 @@ namespace basekit {
         if (loop != nullptr) {
             channel.enableET();
             channel.setReadCallback([this]() { this->handleMessage(); });
-            channel.enableReading();
         } else {
             utils::errIf(true, "null loop ptr while building connection");
         }
-        readBuffer = Buffer();
+        recvBuffer = Buffer();
         sendBuffer = Buffer();
     }
 
     ConnectionTCP::~ConnectionTCP() { close(connFD); }
 
+    void ConnectionTCP::establishConnection() {
+        setState(State::Connected);
+        channel.tie(shared_from_this());
+        channel.enableRead();
+        if (onConnectCB) {
+            onConnectCB(shared_from_this());
+        }
+    }
+
+    void ConnectionTCP::destructConnection() {
+        println("{},  ConnectionTCP::destructConnection", currentThread::getTid());
+        loop->deleteChannel(&channel);
+    }
+
     void ConnectionTCP::readToRBuf() {
-        // assert(state==State::Connected);
-        readBuffer.clearBuf();
+        // 这里可能会有 Disconnected 问题
+        assert(state==State::Connected);
+        utils::errIf(state != State::Connected, "state is " + to_string(static_cast<int>(state)));
+        recvBuffer.clearBuf();
         readNonBlock();
     }
 
     void ConnectionTCP::writeFromSBuf() {
-        // assert(state == State::Connected);
+        assert(state == State::Connected);
         writeNonBlock();
         sendBuffer.clearBuf();
     }
@@ -106,7 +130,7 @@ namespace basekit {
 
     void ConnectionTCP::handleMessage() {
         readToRBuf();
-        if (onMessageCB) { onMessageCB(this); } else {
+        if (onMessageCB) { onMessageCB(shared_from_this()); } else {
             utils::errIf(true, "null handleMessageCB in Connection");
         }
     }
@@ -114,7 +138,7 @@ namespace basekit {
     void ConnectionTCP::handleClose() {
         if (state != State::Disconnected) {
             setState(State::Disconnected);
-            if (onCloseCB) { onCloseCB(); } else {
+            if (onCloseCB) { onCloseCB(shared_from_this()); } else {
                 utils::errIf(true, "null handleCloseCB in Connection");
             }
         }
@@ -126,17 +150,19 @@ namespace basekit {
 
     int ConnectionTCP::getID() const { return connID; }
 
-    void ConnectionTCP::setMessageCB(function<void(ConnectionTCP *)> callback) {
-        onMessageCB = std::move(callback);
-    }
+    void ConnectionTCP::setConnectCB(CallBackType cb) { onConnectCB = std::move(cb); }
 
-    void ConnectionTCP::setCloseCB(function<void()> const &callback) { onCloseCB = callback; }
+    void ConnectionTCP::setMessageCB(CallBackType cb) { onMessageCB = std::move(cb); }
+
+    void ConnectionTCP::setCloseCB(CallBackType cb) { onCloseCB = std::move(cb); }
 
     void ConnectionTCP::setSendBuffer(const string_view _buffer) { sendBuffer.setBuf(_buffer); }
 
     const Buffer *ConnectionTCP::getSendBuffer() const { return &sendBuffer; }
 
-    const Buffer *ConnectionTCP::getReadBuffer() const { return &readBuffer; }
+    const Buffer *ConnectionTCP::getRecvBuffer() const { return &recvBuffer; }
+
+    string ConnectionTCP::getRecvContent() const { return getRecvBuffer()->c_str(); }
 
     ConnectionTCP::State ConnectionTCP::getState() const { return state; }
 
@@ -147,7 +173,7 @@ namespace basekit {
         char buf[config::BUF_SIZE]{};
         while (true) {
             if (const auto bytesRead = read(sockFD, buf, sizeof(buf)); bytesRead > 0) {
-                readBuffer.append(buf);
+                recvBuffer.append(buf);
             } else if (bytesRead == 0) {
                 println("read EOF, client fd {} disconnected", sockFD);
                 handleClose();
@@ -173,7 +199,6 @@ namespace basekit {
         const string buf{sendBuffer.c_str()};
         const auto dataSize = buf.size();
         auto dataLeft = dataSize;
-
         while (dataLeft > 0) {
             const auto bytesWrite = write(sockFD, buf.c_str() + dataSize - dataLeft, dataLeft);
             if (bytesWrite == -1) {

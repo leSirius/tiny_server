@@ -14,86 +14,54 @@ namespace basekit {
     Channel::Channel(EventLoop *_loop, const int _fd) : loop(_loop), fd(_fd) {
     }
 
-    Channel::~Channel() {
-        if (fd != -1) {
-            close(fd);
-            fd = -1;
-        }
-    }
-
-    // void Channel::setUseThreadPool(const bool _use) {
-    //     useThreadPool = _use;
-    // }
-
-    void Channel::enableReading() {
-        events |= EPOLLIN | EPOLLPRI;
-        loop->updateChannel(this);
-    }
+    Channel::~Channel() = default;
 
     void Channel::enableET() {
-        events |= EPOLLET;
+        listenEvents |= EPOLLET;
         loop->updateChannel(this);
     }
 
-    int Channel::getFd() const {
-        return fd;
+    void Channel::enableRead() {
+        listenEvents |= EPOLLIN | EPOLLPRI;
+        loop->updateChannel(this);
     }
 
-    uint32_t Channel::getEvents() const {
-        return events;
+    void Channel::enableWrite() {
+        listenEvents |= EPOLLOUT;
+        loop->updateChannel(this);
     }
 
-    uint32_t Channel::getReady() const {
-        return ready;
-    }
+    int Channel::getFd() const { return fd; }
 
-    bool Channel::getInEpoll() const {
-        return inEpoll;
-    }
+    uint32_t Channel::getListenEvents() const { return listenEvents; }
 
-    void Channel::setInEpoll(const bool _in) {
-        inEpoll = _in;
-    }
+    uint32_t Channel::getReadyEvents() const { return readyEvents; }
 
-    void Channel::setReady(const uint32_t _ev) {
-        ready = _ev;
-    }
+    bool Channel::isInEpoll() const { return inEpoll; }
 
-    void Channel::setReadCallback(function<void()> r_cb) {
-        readCallback = std::move(r_cb);
-    }
+    void Channel::setInEpoll(const bool _in) { inEpoll = _in; }
 
-    void Channel::setWriteCallback(function<void()> w_cb) {
-        writeCallback = std::move(w_cb);
-    }
+    void Channel::setReadyEvents(const uint32_t _ev) { readyEvents = _ev; }
+
+    void Channel::setReadCallback(function<void()> r_cb) { readCallback = std::move(r_cb); }
+
+    void Channel::setWriteCallback(function<void()> w_cb) { writeCallback = std::move(w_cb); }
 
     void Channel::handleEvent() const {
-        if (ready & (EPOLLIN | EPOLLPRI)) {
-            readCallback();
-        }
-        if (ready & (EPOLLOUT)) {
-            writeCallback();
-        }
+        if (tied) {
+            shared_ptr<void> guard = tiePtr.lock();
+            handleEventWithGuard();
+        } else { handleEventWithGuard(); }
+    }
+
+    void Channel::handleEventWithGuard() const {
+        if (readyEvents & (EPOLLIN | EPOLLPRI | EPOLLRDHUP) && readCallback) { readCallback(); }
+        if (readyEvents & EPOLLOUT && writeCallback) { writeCallback(); }
+    }
+
+    void Channel::tie(const shared_ptr<void> &ptr) {
+        tied = true;
+        tiePtr = ptr;
     }
 }
 
-
-// void Channel::handleEvent() const {
-//     if (ready & (EPOLLIN | EPOLLPRI)) {
-//         if (useThreadPool) {
-//             loop->addThread(readCallback);
-//         } else {
-//             readCallback();
-//         }
-//     }
-//     if (ready & EPOLLOUT) {
-//         if (useThreadPool) {
-//             // mainReactor->addThread(readCallback);
-//             utils::errIf(true, "write call back called");
-//             loop->addThread(writeCallback);
-//         } else {
-//             // readCallback();
-//             writeCallback();
-//         }
-//     }
-// }

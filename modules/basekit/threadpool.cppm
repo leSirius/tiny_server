@@ -11,7 +11,6 @@ import <vector>;
 
 import config;
 
-
 using namespace std;
 
 namespace basekit {
@@ -39,10 +38,8 @@ namespace basekit {
                 while (true) {
                     function<void()> task; {
                         unique_lock lock(taskMtx);
-                        cv.wait(lock, [this]() {
-                            return stop || !tasks.empty();
-                        });
-                        if (stop && tasks.empty()) return;
+                        cv.wait(lock, [this]() { return stop || !tasks.empty(); });
+                        if (stop && tasks.empty()) { return; }
                         task = tasks.front();
                         tasks.pop();
                     }

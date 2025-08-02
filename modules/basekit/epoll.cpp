@@ -34,7 +34,7 @@ namespace basekit {
         activeChannels.reserve(numFds);
         for (int i = 0; i < numFds; ++i) {
             auto *ch = static_cast<Channel *>(eventVec[i].data.ptr);
-            ch->setReady(eventVec[i].events);
+            ch->setReadyEvents(eventVec[i].events);
             activeChannels.push_back(ch);
         }
         return activeChannels;
@@ -44,8 +44,8 @@ namespace basekit {
         const int fd = channel->getFd();
         epoll_event ev{};
         ev.data.ptr = channel;
-        ev.events = channel->getEvents();
-        if (!channel->getInEpoll()) {
+        ev.events = channel->getListenEvents();
+        if (!channel->isInEpoll()) {
             utils::errIf(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll add error");
             channel->setInEpoll(true);
         } else {
