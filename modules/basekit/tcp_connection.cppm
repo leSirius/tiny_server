@@ -22,7 +22,7 @@ namespace basekit {
 
         enum class State { Invalid, Connected, Disconnected };
 
-        ConnectionTCP(int id, int fd, EventLoop *_loop);
+        ConnectionTCP(int id, int fd, Eventloop *_loop);
 
         ~ConnectionTCP();
 
@@ -52,17 +52,17 @@ namespace basekit {
 
         [[nodiscard]] State getState() const;
 
-        [[nodiscard]] EventLoop *getLoop() const;
+        [[nodiscard]] Eventloop *getLoop() const;
 
         [[nodiscard]] int getFD() const;
 
         [[nodiscard]] int getID() const;
 
     private:
-        int connFD{};
-        int connID{};
+        int connFD;
+        int connID;
         State state{State::Invalid};
-        EventLoop *loop;
+        Eventloop *loop;
         Channel channel;
         Buffer recvBuffer{};
         Buffer sendBuffer{};
@@ -81,7 +81,7 @@ namespace basekit {
         void writeNonBlock();
     };
 
-    ConnectionTCP::ConnectionTCP(const int id, const int fd, EventLoop *_loop)
+    ConnectionTCP::ConnectionTCP(const int id, const int fd, Eventloop *_loop)
         : connFD(fd), connID(id), loop(_loop), channel(Channel(loop, fd)) {
         if (loop != nullptr) {
             channel.enableET();
@@ -110,7 +110,7 @@ namespace basekit {
     }
 
     void ConnectionTCP::readToRBuf() {
-        // 这里可能会有 Disconnected 问题
+        // 这里可能会有 Disconnected 问题!!! 待检查解决
         assert(state==State::Connected);
         utils::errIf(state != State::Connected, "state is " + to_string(static_cast<int>(state)));
         recvBuffer.clearBuf();
@@ -144,7 +144,7 @@ namespace basekit {
         }
     }
 
-    EventLoop *ConnectionTCP::getLoop() const { return loop; }
+    Eventloop *ConnectionTCP::getLoop() const { return loop; }
 
     int ConnectionTCP::getFD() const { return connFD; }
 

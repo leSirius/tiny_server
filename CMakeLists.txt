@@ -21,6 +21,8 @@ set(COMMON_CXX_MODULES_SOURCES
         modules/basekit/tcp_server.cppm
         modules/basekit/threadpool.cppm
         modules/basekit/current_thread.cppm
+        modules/basekit/eventloop_thread.cppm
+        modules/basekit/eventloop_threadpool.cppm
         modules/config.cppm
         modules/utils.cppm
 )
@@ -34,16 +36,16 @@ set(COMMON_PRIVATE_SOURCES
 )
 
 # Tiny Server
-add_executable(tiny_server main.cpp)
+add_executable(tiny_server test/tiny_server.cpp)
 target_sources(tiny_server PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
 target_sources(tiny_server PRIVATE ${COMMON_PRIVATE_SOURCES})
 
 # Tiny Client
-add_executable(tiny_client client.cpp)
+add_executable(tiny_client test/tiny_client.cpp)
 target_sources(tiny_client PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
 target_sources(tiny_client PRIVATE ${COMMON_PRIVATE_SOURCES})
 
 # test server
-add_executable(test test.cpp)
+add_executable(test test/test.cpp)
 target_sources(test PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_CXX_MODULES_SOURCES})
 target_sources(test PRIVATE ${COMMON_PRIVATE_SOURCES})

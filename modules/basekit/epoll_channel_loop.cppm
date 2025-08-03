@@ -31,11 +31,11 @@ namespace basekit {
         void deleteChannel(Channel *channel) const;
     };
 
-    export class EventLoop {
+    export class Eventloop {
     public:
-        EventLoop();
+        Eventloop();
 
-        ~EventLoop();
+        ~Eventloop();
 
         void loop();
 
@@ -66,7 +66,7 @@ namespace basekit {
 
     class Channel {
     public:
-        Channel(EventLoop *_loop, int _fd);
+        Channel(Eventloop *_loop, int _fd);
 
         ~Channel();
 
@@ -99,7 +99,7 @@ namespace basekit {
         void tie(const std::shared_ptr<void> &ptr);
 
     private:
-        EventLoop *loop{};
+        Eventloop *loop{};
         int fd;
         uint32_t listenEvents{};
         uint32_t readyEvents{};

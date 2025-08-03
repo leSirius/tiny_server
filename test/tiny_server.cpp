@@ -22,13 +22,16 @@ public:
 
     void start() const;
 
-    static void onConnect(const shared_ptr<ConnectionTCP> &conn);
+    void onConnect(ConnectionTCP::CallbackParam conn);
 
-    static void onMessage(const shared_ptr<ConnectionTCP> &conn);
+    void onMessage(ConnectionTCP::CallbackParam conn);
+
+    void setThreadNums(int num);
 
 private:
     ServerTCP server;
 };
+
 
 EchoServer::EchoServer(const string_view ip, const int port): server(ip, port) {
     server.setConnectCB([this](ConnectionTCP::CallbackParam conn) { this->onConnect(conn); });
@@ -39,11 +42,11 @@ void EchoServer::start() const { server.start(); }
 
 void EchoServer::onConnect(ConnectionTCP::CallbackParam conn) {
     const int clientFD = conn->getFD();
-    InetAddress addr;
-    getpeername(clientFD, addr.getReinterCC(), addr.getLenPtr());
+    InetAddress peerAddr;
+    getpeername(clientFD, peerAddr.getReinterCC(), peerAddr.getLenPtr());
     println(
         "thread {} [fd#{}] from {}:{}",
-        currentThread::getTid(), clientFD, addr.getAddress(), addr.getPort()
+        currentThread::getTid(), clientFD, peerAddr.getAddress(), peerAddr.getPort()
     );
 }
 
@@ -54,6 +57,10 @@ void EchoServer::onMessage(ConnectionTCP::CallbackParam conn) {
         conn->sendMsg(msg);
         conn->handleClose();
     }
+}
+
+void EchoServer::setThreadNums(const int num) {
+    server.setThreadNum(num);
 }
 
 int main(const int argc, char *argv[]) {

@@ -17,7 +17,7 @@ using namespace std;
 namespace basekit {
     export class Acceptor {
     public:
-        Acceptor(EventLoop *_loop, string_view ip, int port);
+        Acceptor(Eventloop *_loop, string_view ip, int port);
 
         // ~Acceptor();
 
@@ -34,13 +34,13 @@ namespace basekit {
         void setNewConnectCB(function<void(int)> _cb);
 
     private:
-        EventLoop *loop;
+        Eventloop *loop;
         int listenFD{-1};
         unique_ptr<Channel> acceptChannel{};
         function<void(int)> newConnectCB;
     };
 
-    Acceptor::Acceptor(EventLoop *_loop, const string_view ip, const int port) : loop(_loop) {
+    Acceptor::Acceptor(Eventloop *_loop, const string_view ip, const int port) : loop(_loop) {
         createSock();
         bindAddr(ip, port);
         listenBegin();

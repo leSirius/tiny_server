@@ -11,7 +11,7 @@ import <utility>;
 import utils;
 
 namespace basekit {
-    Channel::Channel(EventLoop *_loop, const int _fd) : loop(_loop), fd(_fd) {
+    Channel::Channel(Eventloop *_loop, const int _fd) : loop(_loop), fd(_fd) {
     }
 
     Channel::~Channel() = default;
