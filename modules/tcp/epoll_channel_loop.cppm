@@ -1,7 +1,8 @@
 module;
 #include <sys/epoll.h>
 
-export module basekit:epollLoopChannel;
+export module tcp:epollLoopChannel;
+
 import <cstdint>;
 import <functional>;
 import <memory>;
@@ -11,7 +12,7 @@ import :threadpool;
 
 using namespace std;
 
-namespace basekit {
+namespace tcp {
     export class Channel;
 
     export class Epoll {

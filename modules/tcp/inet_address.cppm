@@ -2,13 +2,13 @@ module;
 #include <string_view>
 #include <arpa/inet.h>
 
-export module basekit:inetAddress;
+export module tcp:inetAddress;
 import <string>;
 import utils;
 
 using namespace std;
 
-namespace basekit {
+namespace tcp {
     export class InetAddress {
     public:
         InetAddress() = default;

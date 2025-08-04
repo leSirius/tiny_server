@@ -5,11 +5,11 @@ import <string_view>;
 
 import config;
 import utils;
-import basekit;
+import tcp;
 using namespace std;
 
 void input(int socketFD) {
-    using namespace basekit;
+    using namespace tcp;
     Buffer sendBuffer, recvBuffer;
     constexpr int bufSize = config::BUF_SIZE;
     while (true) {
@@ -40,7 +40,7 @@ void input(int socketFD) {
 }
 
 int main() {
-    using namespace basekit;
+    using namespace tcp;
     const Socket sock{};
     sock.connect({config::ADDRESS, config::PORT});
     input(sock.getFd());

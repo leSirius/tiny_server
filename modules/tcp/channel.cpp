@@ -3,14 +3,15 @@ module;
 #include <unistd.h>
 #include <sys/epoll.h>
 
-module basekit;
+
+module tcp;
 import <cstdint>;
 import <functional>;
 import <iostream>;
 import <utility>;
 import utils;
 
-namespace basekit {
+namespace tcp {
     Channel::Channel(Eventloop *_loop, const int _fd) : loop(_loop), fd(_fd) {
     }
 

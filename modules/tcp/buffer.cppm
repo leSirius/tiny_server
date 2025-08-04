@@ -2,14 +2,14 @@ module ;
 
 #include <cstdio>
 
-export module basekit:buffer;
+export module tcp:buffer;
 
 import <iostream>;
 import <string>;
 
 using namespace std;
 
-namespace basekit {
+namespace tcp {
     export class Buffer {
     public:
         // Buffer();

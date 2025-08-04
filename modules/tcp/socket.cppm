@@ -4,7 +4,7 @@ module;
 
 #include <sys/socket.h>
 
-export module basekit:socket;
+export module tcp:socket;
 import <iostream>;
 import <string_view>;
 import  <utility>;
@@ -13,7 +13,8 @@ import :inetAddress;
 
 using namespace std;
 
-namespace basekit {
+
+namespace tcp {
     export class Socket {
     public:
         Socket();
@@ -103,7 +104,6 @@ namespace basekit {
         return std::make_pair(addr, client_fd);
     }
 
-    int Socket::getFd() const {
-        return fd;
-    }
+
+    int Socket::getFd() const { return fd; }
 }

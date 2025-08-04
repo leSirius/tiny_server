@@ -2,7 +2,7 @@ module;
 #include <cassert>
 #include <unistd.h>
 
-export module basekit:tcpConnection;
+export module tcp:tcpConnection;
 import <cerrno>;
 import <functional>;
 
@@ -14,7 +14,7 @@ import :currentThread;
 
 using namespace std;
 
-namespace basekit {
+namespace tcp {
     export class ConnectionTCP : public enable_shared_from_this<ConnectionTCP> {
     public:
         using CallbackParam = const shared_ptr<ConnectionTCP> &;

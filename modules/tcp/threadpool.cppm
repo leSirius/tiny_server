@@ -1,6 +1,6 @@
 module;
 
-export module basekit:threadpool;
+export module tcp:threadpool;
 import <functional>;
 import <future>;
 import <iostream>;
@@ -13,7 +13,7 @@ import config;
 
 using namespace std;
 
-namespace basekit {
+namespace tcp {
     export class ThreadPool {
     public:
         explicit ThreadPool(unsigned int size = config::CPU_CORES);

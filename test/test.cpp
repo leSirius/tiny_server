@@ -6,12 +6,12 @@ import <iostream>;
 import <thread>;
 import <vector>;
 
-import basekit;
+import tcp;
 import config;
 import utils;
 
 using namespace std;
-using namespace basekit;
+using namespace tcp;
 
 void oneClient(const int msgs, const int wait) {
     const Socket sock{};

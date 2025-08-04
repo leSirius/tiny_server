@@ -1,7 +1,7 @@
 module;
 #include <cassert>
 #include <unistd.h>
-export module basekit :tcpServer;
+export module tcp :tcpServer;
 import  <cerrno>;
 import  <functional>;
 import  <map>;
@@ -15,7 +15,7 @@ import :tcpConnection;
 import :epollLoopChannel;
 import :currentThread;
 import :eventloop_threadpool;
-namespace basekit {
+namespace tcp {
     export class ServerTCP {
     public:
         ServerTCP(string_view IP, int port, int thdNum);

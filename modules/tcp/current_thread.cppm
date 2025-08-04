@@ -3,12 +3,12 @@ module;
 #include <unistd.h>
 #include <sys/syscall.h>
 
-export module basekit:currentThread;
+export module tcp:currentThread;
 import <cstdio>;
 import <string>;
 using namespace std;
 
-namespace basekit::currentThread {
+namespace tcp::currentThread {
     extern thread_local pid_t t_cachedTid;
     extern thread_local string t_cachedTidString;
 

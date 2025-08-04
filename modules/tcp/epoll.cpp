@@ -2,7 +2,7 @@ module;
 #include <unistd.h>
 #include <sys/epoll.h>
 
-module basekit;
+module tcp;
 import <functional>;
 import <iostream>;
 import <string_view>;
@@ -10,9 +10,10 @@ import <vector>;
 import utils;
 import config;
 
+
 using namespace std;
 
-namespace basekit {
+namespace tcp {
     Epoll::Epoll() {
         epfd = epoll_create1(0);
         utils::errIf(
