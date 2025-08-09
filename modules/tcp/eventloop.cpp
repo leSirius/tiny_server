@@ -13,6 +13,7 @@ using namespace std;
 namespace tcp {
     Eventloop::Eventloop() {
         poller = std::make_unique<Epoll>();
+        timerQueue = make_unique<TimerQueue>(this);
         wakeUpfD = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
         callingFunc = false;
         wakeUpChannel = make_unique<Channel>(this, wakeUpfD);

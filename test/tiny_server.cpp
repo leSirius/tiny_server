@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 
 import <array>;
+import <chrono>;
 import <csignal>;
 import <functional>;
 import <iostream>;
@@ -24,7 +25,7 @@ public:
 
     void onConnect(ConnectionTCP::CallbackParam conn);
 
-    void onMessage(ConnectionTCP::CallbackParam conn);
+    static void onMessage(ConnectionTCP::CallbackParam conn);
 
     void setThreadNums(int num);
 
@@ -44,6 +45,9 @@ void EchoServer::onConnect(ConnectionTCP::CallbackParam conn) {
     const int clientFD = conn->getFD();
     InetAddress peerAddr;
     getpeername(clientFD, peerAddr.getReinterCC(), peerAddr.getLenPtr());
+    conn->runEvery(chrono::seconds(3), [clientFD]() {
+        println("{} alive at thread {}", clientFD, currentThread::getTid());
+    });
     println(
         "thread {} [fd#{}] from {}:{}",
         currentThread::getTid(), clientFD, peerAddr.getAddress(), peerAddr.getPort()

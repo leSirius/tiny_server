@@ -48,7 +48,7 @@ namespace tcp {
         Eventloop *ret = mainReactor;
         if (!loops.empty()) {
             ret = loops[indNext];
-            indNext = indNext == static_cast<int>(loops.size()) - 1 ? 0 : indNext++;
+            indNext = indNext == static_cast<int>(loops.size()) - 1 ? 0 : indNext + 1;
         }
         return ret;
     }

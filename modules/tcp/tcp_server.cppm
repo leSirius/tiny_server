@@ -1,6 +1,8 @@
 module;
 #include <cassert>
 #include <unistd.h>
+#include "logMacro.h"
+
 export module tcp :tcpServer;
 import  <cerrno>;
 import  <functional>;
@@ -18,7 +20,7 @@ import :eventloop_threadpool;
 namespace tcp {
     export class ServerTCP {
     public:
-        ServerTCP(string_view IP, int port, int thdNum);
+        ServerTCP(string_view IP, int port, int thdNum = static_cast<int>(config::CPU_CORES));
 
         ~ServerTCP();
 
@@ -49,20 +51,11 @@ namespace tcp {
         unordered_map<int, shared_ptr<ConnectionTCP> > connectionMap{};
     };
 
-    ServerTCP::ServerTCP(const string_view IP, const int port, const int thdNum = static_cast<int>(config::CPU_CORES))
-        : threadNums(thdNum) {
+    ServerTCP::ServerTCP(const string_view IP, const int port, const int thdNum): threadNums(thdNum) {
         mainReactor = make_unique<Eventloop>();
         acceptor = make_unique<Acceptor>(mainReactor.get(), IP, port);
         acceptor->setNewConnectCB([this](const int fd) { this->handleNewConnect(fd); });
         subReactorPool = std::make_unique<EventloopThreadpool>(mainReactor.get(), threadNums);
-
-        //
-        // const auto cores = config::CPU_CORES;
-        // threadPool = make_unique<ThreadPool>(cores);
-        // for (size_t i = 0; i < cores; ++i) {
-        //     auto sub_reactor = make_unique<Eventloop>();
-        //     subReactors.push_back(std::move(sub_reactor));
-        // }
     }
 
     ServerTCP::~ServerTCP() = default;
@@ -70,9 +63,6 @@ namespace tcp {
     void ServerTCP::start() const {
         subReactorPool->start();
         mainReactor->loop();
-        // for (auto &reactor: subReactors) {
-        //     threadPool->add([r = reactor.get()] { r->loop(); });
-        // }
     }
 
     void ServerTCP::handleNewConnect(const int fd) {
@@ -85,15 +75,6 @@ namespace tcp {
         connectionMap[fd] = std::move(conn);
         connectionMap[fd]->establishConnection();
         nextConnID = nextConnID == 1001 ? 1 : nextConnID + 1;
-
-        // const auto rand = fd % subReactors.size();
-        // auto conn = make_shared<ConnectionTCP>(nextConnID, fd, subReactors[rand].get());
-        // conn->setConnectCB(onConnectCB);
-        // conn->setMessageCB(onMessageCB);
-        // conn->setCloseCB([this](ConnectionTCP::CallbackParam c) { this->handleClose(c); });
-        // connectionMap[fd] = std::move(conn);
-        // connectionMap[fd]->establishConnection();
-        // nextConnID = nextConnID == 1001 ? 1 : nextConnID + 1;
     }
 
     void ServerTCP::handleClose(ConnectionTCP::CallbackParam conn) {

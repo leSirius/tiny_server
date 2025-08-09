@@ -109,8 +109,8 @@ void validateRequest(auto &req, const string &raw) {
 
 int main() {
     for (auto &test: testCases) {
-        if (const auto rst = http::parseRequest(string_view(test)); rst != nullptr) {
-            validateRequest(*rst, test);
+        if (auto rst = http::parseHttpReq(string_view(test)); rst.has_value()) {
+            validateRequest(rst.value(), test);
         } else {
             println("always bad news");
         }

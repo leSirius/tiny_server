@@ -1,8 +1,6 @@
 module;
 #include <format>
-#include <unistd.h>
-#include <sys/syscall.h>
-
+#include <sys/types.h>
 export module tcp:currentThread;
 import <cstdio>;
 import <string>;

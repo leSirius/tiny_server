@@ -11,6 +11,7 @@ import :socket;
 import :buffer;
 import :epollLoopChannel;
 import :currentThread;
+import :timestamp;
 
 using namespace std;
 
@@ -22,7 +23,7 @@ namespace tcp {
 
         enum class State { Invalid, Connected, Disconnected };
 
-        ConnectionTCP(int id, int fd, Eventloop *_loop);
+        ConnectionTCP(int id, int fd, Eventloop *_loop, Timestamp timestamp = Timestamp::getNow());
 
         ~ConnectionTCP();
 
@@ -58,6 +59,18 @@ namespace tcp {
 
         [[nodiscard]] int getID() const;
 
+        void runAt(Timestamp timestamp, std::function<void()> const &cb) const;
+
+        template<typename Rep, typename Period>
+        void runAfter(chrono::duration<Rep, Period> dur, std::function<void()> const &cb) const;
+
+        template<typename Rep, typename Period>
+        void runEvery(chrono::duration<Rep, Period> dur, std::function<void()> const &cb) const;
+
+        Timestamp getLastActive() const;
+
+        void updateLastActive(Timestamp timestamp);
+
     private:
         int connFD;
         int connID;
@@ -69,6 +82,7 @@ namespace tcp {
         CallBackType onConnectCB;
         CallBackType onMessageCB;
         CallBackType onCloseCB;
+        Timestamp lastActive;
 
         void setState(State _state);
 
@@ -81,8 +95,8 @@ namespace tcp {
         void writeNonBlock();
     };
 
-    ConnectionTCP::ConnectionTCP(const int id, const int fd, Eventloop *_loop)
-        : connFD(fd), connID(id), loop(_loop), channel(Channel(loop, fd)) {
+    ConnectionTCP::ConnectionTCP(const int id, const int fd, Eventloop *_loop, const Timestamp timestamp)
+        : connFD(fd), connID(id), loop(_loop), channel(Channel(loop, fd)), lastActive(timestamp) {
         if (loop != nullptr) {
             channel.enableET();
             channel.setReadCallback([this]() { this->handleMessage(); });
@@ -210,5 +224,27 @@ namespace tcp {
             }
             dataLeft -= bytesWrite;
         }
+    }
+
+    void ConnectionTCP::runAt(const Timestamp timestamp, std::function<void()> const &cb) const {
+        loop->runAt(timestamp, cb);
+    }
+
+    template<typename Rep, typename Period>
+    void ConnectionTCP::runAfter(const chrono::duration<Rep, Period> dur, std::function<void()> const &cb) const {
+        loop->runAfter(dur, cb);
+    }
+
+    template<typename Rep, typename Period>
+    void ConnectionTCP::runEvery(const chrono::duration<Rep, Period> dur, std::function<void()> const &cb) const {
+        loop->runEvery(dur, cb);
+    }
+
+    Timestamp ConnectionTCP::getLastActive() const {
+        return lastActive;
+    }
+
+    void ConnectionTCP::updateLastActive(const Timestamp timestamp) {
+        lastActive = timestamp;
     }
 }

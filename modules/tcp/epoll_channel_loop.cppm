@@ -8,6 +8,8 @@ import <functional>;
 import <memory>;
 import <vector>;
 
+import :timerQueue;
+
 import :threadpool;
 
 using namespace std;
@@ -54,7 +56,17 @@ namespace tcp {
 
         void runOneFunc(const function<void()> &func);
 
-    private:
+        void runAt(Timestamp timestamp, std::function<void()> const &cb) const;
+
+        template<typename Rep, typename Period>
+        void runAfter(chrono::duration<Rep, Period> dur, const std::function<void()> &cb) const;
+
+        // void runAfter(int waitMicroSec, std::function<void()> const &cb) const;
+        template<typename Rep, typename Period>
+        void runEvery(chrono::duration<Rep, Period> dur, const std::function<void()> &cb) const;
+
+    private
+    :
         unique_ptr<Epoll> poller{};
         bool quit{false};
         vector<function<void()> > toDoList;
@@ -63,6 +75,7 @@ namespace tcp {
         unique_ptr<Channel> wakeUpChannel;
         bool callingFunc{false};
         pid_t threadID{0};
+        unique_ptr<TimerQueue> timerQueue;
     };
 
     class Channel {
@@ -107,8 +120,21 @@ namespace tcp {
         bool inEpoll{false};
         function<void()> readCallback;
         function<void()> writeCallback;
-
         bool tied{false};
         std::weak_ptr<void> tiePtr;
     };
+
+    void Eventloop::runAt(const Timestamp timestamp, function<void()> const &cb) const {
+        timerQueue->addTimer(timestamp, cb);
+    }
+
+    template<typename Rep, typename Period>
+    void Eventloop::runAfter(chrono::duration<Rep, Period> dur, const function<void()> &cb) const {
+        timerQueue->addTimer(Timestamp::getAfter(dur), cb);
+    }
+
+    template<typename Rep, typename Period>
+    void Eventloop::runEvery(chrono::duration<Rep, Period> dur, const function<void()> &cb) const {
+        timerQueue->addTimer(Timestamp::getAfter(dur), cb, dur);
+    }
 }

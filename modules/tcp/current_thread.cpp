@@ -4,7 +4,7 @@ module;
 #include <sys/syscall.h>
 
 module tcp;
-
+import <iostream>;
 import  <string>;
 
 
@@ -16,7 +16,7 @@ namespace tcp::currentThread {
 
     void CacheTid() {
         t_cachedTid = static_cast<pid_t>(syscall(SYS_gettid));
-        t_cachedTidString = format("{:5} ", t_cachedTid);
+        t_cachedTidString = format("{}", t_cachedTid);
     }
 }
 

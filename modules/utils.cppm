@@ -19,19 +19,4 @@ namespace utils {
             exit(-1);
         }
     }
-
-    export auto buildSockAddrIn(const string_view address = config::ADDRESS, const int port = config::PORT) {
-        sockaddr_in socket_addr{};
-        socket_addr.sin_family = AF_INET;
-        errIf(inet_pton(AF_INET, address.data(), &socket_addr.sin_addr) != 1, "failed to bind address");
-        socket_addr.sin_port = htons(port);
-        return socket_addr;
-    }
-
-    export auto buildSockAddrUn(const string_view path) {
-        sockaddr_un socket_addr{};
-        socket_addr.sun_family = AF_UNIX;
-        strcpy(socket_addr.sun_path, path.data());
-        return socket_addr;
-    }
 }
