@@ -3,8 +3,7 @@
 import <array>;
 import <iostream>;
 
-import log;
-
+import basekit;
 
 int main() {
     // LogStream os;

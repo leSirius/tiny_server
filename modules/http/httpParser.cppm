@@ -59,9 +59,11 @@ namespace http {
             return httpText.substr(begin, end - begin);
         };
 
-        while (state != ParseState::Invalid && state != ParseState::InvalidMethod && state != ParseState::InvalidUrl &&
-               state != ParseState::InvalidHeader && state != ParseState::InvalidVersion && state !=
-               ParseState::Complete && inRange()) {
+        while (scanPos < httpText.size() && state != ParseState::Invalid &&
+               state != ParseState::InvalidMethod && state != ParseState::InvalidUrl &&
+               state != ParseState::InvalidHeader && state != ParseState::InvalidVersion &&
+               state != ParseState::Complete && inRange()
+        ) {
             const char &ch = httpText[scanPos];
 
             switch (state) {
@@ -254,17 +256,24 @@ namespace http {
                     request.setBody(string(sliceText(scanPos, httpText.size())));
                     setState(ParseState::Complete);
                     break;
-
-                default:
-                    println("default triggered!! {}", static_cast<int>(state));
+                case ParseState::Invalid:
+                    break;
+                case ParseState::InvalidMethod:
+                    break;
+                case ParseState::InvalidUrl:
+                    break;
+                case ParseState::InvalidVersion:
+                    break;
+                case ParseState::InvalidHeader:
+                    break;
+                case ParseState::Complete:
+                    break;
             }
             scanPos += 1;
         }
         if (state == ParseState::Complete) {
             return request;
-        } else {
-            return nullopt;
         }
-        //  return state == ParseState::Complete ? request : nullopt;
+        return nullopt;
     }
 }

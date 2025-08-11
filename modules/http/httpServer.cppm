@@ -8,15 +8,14 @@ import <functional>;
 import <iostream>;
 import <memory>;
 
-import log;
-import tcp;
+import basekit;
 import config;
 import :httpRequest;
 import :httpResponse;
 import :httpParser;
 
 namespace http {
-    using namespace tcp;
+    using namespace basekit;
     class HttpResponse;
 
     export class HttpServer {

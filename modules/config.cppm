@@ -1,7 +1,13 @@
+module;
+#include <assert.h>
+#include <filesystem>
+#include <iostream>
+#include <unistd.h>
 export module config;
 import <cstddef>;
 import  <string>;
 import  <thread>;
+
 
 using namespace std;
 
@@ -14,4 +20,44 @@ namespace config {
     export const unsigned int CPU_CORES{thread::hardware_concurrency()};
     export constexpr string SUN_PATH{"/tmp/random_address"};
     export constexpr chrono::seconds AUTO_CLOSE_TIME{5};
+
+    export constexpr int BufferWriteInterval = 3;
+    export constexpr int FlushInterval = 3;
+    export constexpr int64_t FileMaximumSize = 1024 * 1024 * 1024;
+
+
+    string exePath{};
+
+    const string &getExeDirPath() {
+        if (exePath.empty()) {
+            char path[PATH_MAX];
+            const auto count = readlink("/proc/self/exe", path, PATH_MAX);
+            assert(count!=-1);
+            auto split{count - 1};
+            for (auto i = count - 1; i >= 0; i--) {
+                if (path[i] == '/') {
+                    split = i;
+                    break;
+                }
+            }
+            exePath = string(path, split);
+        }
+        return exePath;
+    }
+
+    export string LogPath(string name) {
+        const auto path{getExeDirPath() + "/LogFiles/"};
+        try {
+            if (!std::filesystem::exists(path)) {
+                if (std::filesystem::create_directories(path)) {
+                } else {
+                    println("{}", "failed to create directory");
+                }
+            }
+        } catch (const std::filesystem::filesystem_error &e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
+
+        return path + "LogFile_" + std::move(name) + ".log";
+    }
 }

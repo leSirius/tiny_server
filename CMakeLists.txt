@@ -15,39 +15,37 @@ set(GENERAL_MODULES
 )
 
 # Define common C++ module sources
-set(TCP_MODULES
-        modules/tcp/acceptor.cppm
-        modules/tcp/tcp.cppm
-        modules/tcp/buffer.cppm
-        modules/tcp/epoll_channel_loop.cppm
-        modules/tcp/inet_address.cppm
-        modules/tcp/socket.cppm
-        modules/tcp/tcp_connection.cppm
-        modules/tcp/tcp_server.cppm
-        modules/tcp/threadpool.cppm
-        modules/tcp/current_thread.cppm
-        modules/tcp/eventloop_thread.cppm
-        modules/tcp/eventloop_threadpool.cppm
-
-        modules/tcp/timer/timestamp.cppm
-        modules/tcp/timer/timerQueue.cppm
-        modules/tcp/timer/countTimer.cppm
-
-        modules/log/log.cppm
-        modules/log/logStream.cppm
-        modules/log/fixedBuffer.cppm
-        modules/log/fmt.cppm
-        modules/log/logger.cppm
+set(BASEKIT_MODULES
+        modules/basekit/basekit.cppm
+        modules/basekit/tcp/acceptor.cppm
+        modules/basekit/tcp/buffer.cppm
+        modules/basekit/tcp/epoll_channel_loop.cppm
+        modules/basekit/tcp/inetAddress.cppm
+        modules/basekit/tcp/socket.cppm
+        modules/basekit/tcp/tcpConnection.cppm
+        modules/basekit/tcp/tcpServer.cppm
+        modules/basekit/tcp/threadpool.cppm
+        modules/basekit/tcp/eventloop_thread.cppm
+        modules/basekit/tcp/eventloop_threadpool.cppm
+        modules/basekit/timer/timestamp.cppm
+        modules/basekit/timer/timerQueue.cppm
+        modules/basekit/timer/countTimer.cppm
+        modules/basekit/log/logStream.cppm
+        modules/basekit/log/fixedBuffer.cppm
+        modules/basekit/log/fmt.cppm
+        modules/basekit/log/logger.cppm
+        modules/basekit/log/asynclog.cppm
+        modules/basekit/log/logfile.cppm
+        modules/basekit/thread/current_thread.cppm
 )
 
 # Define common private sources
-set(TCP_SOURCES
-        modules/tcp/epoll.cpp
-        modules/tcp/eventloop.cpp
-        modules/tcp/channel.cpp
-        modules/tcp/current_thread.cpp
-
-        modules/tcp/timer/timerQueue.cpp
+set(BASEKIT_SOURCES
+        modules/basekit/tcp/epoll.cpp
+        modules/basekit/tcp/eventloop.cpp
+        modules/basekit/tcp/channel.cpp
+        modules/basekit/thread/current_thread.cpp
+        modules/basekit/timer/timerQueue.cpp
 )
 
 set(HTTP_MODULES
@@ -58,75 +56,57 @@ set(HTTP_MODULES
         modules/http/httpServer.cppm
 )
 
-#set(LOG_MODULES
-#        ${TCP_MODULES}
-#        modules/log/log.cppm
-#        modules/log/logStream.cppm
-#        modules/log/fixedBuffer.cppm
-#        modules/log/fmt.cppm
-#        modules/log/logger.cppm
-#)
-#
-#set(LOG_SOURCES
-#        ${TCP_SOURCES}
-#)
-
-
 # Tiny Server
-add_executable(tiny_server test/tiny_server.cpp)
-target_sources(tiny_server PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(tiny_server PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(tiny_server PRIVATE ${TCP_SOURCES})
-target_include_directories(tiny_server PRIVATE include)
-target_include_directories(tiny_server PUBLIC include)
-
+add_executable(tcpServerTest test/tcpServerTest.cpp)
+target_sources(tcpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(tcpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(tcpServerTest PRIVATE ${BASEKIT_SOURCES})
+target_include_directories(tcpServerTest PRIVATE include)
+target_include_directories(tcpServerTest PUBLIC include)
 
 # Tiny Client
-add_executable(tiny_client test/tiny_client.cpp)
-target_sources(tiny_client PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(tiny_client PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(tiny_client PRIVATE ${TCP_SOURCES})
-target_include_directories(tiny_client PUBLIC include)
-
+add_executable(tcpClientTest test/tcpClientTest.cpp)
+target_sources(tcpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(tcpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(tcpClientTest PRIVATE ${BASEKIT_SOURCES})
+target_include_directories(tcpClientTest PUBLIC include)
 
 # test server
-add_executable(test_tcp test/test.cpp)
-target_sources(test_tcp PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(test_tcp PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(test_tcp PRIVATE ${TCP_SOURCES})
-target_include_directories(test_tcp PUBLIC include)
-
+add_executable(testConnections test/testConnections.cpp)
+target_sources(testConnections PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(testConnections PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(testConnections PRIVATE ${BASEKIT_SOURCES})
+target_include_directories(testConnections PUBLIC include)
 
 #http parser
-add_executable(test_http_parse test/testHttpParser.cpp)
-target_sources(test_http_parse PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(test_http_parse PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(test_http_parse PRIVATE ${TCP_SOURCES})
-target_sources(test_http_parse PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
-target_sources(test_http_parse PRIVATE ${HTTP_SOURCES})
-target_include_directories(test_http_parse PUBLIC include)
-
+add_executable(httpParseTest test/httpParseTest.cpp)
+target_sources(httpParseTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(httpParseTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(httpParseTest PRIVATE ${BASEKIT_SOURCES})
+target_sources(httpParseTest PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
+target_sources(httpParseTest PRIVATE ${HTTP_SOURCES})
+target_include_directories(httpParseTest PUBLIC include)
 
 # http server
-add_executable(http_server test/http_server.cpp)
-target_sources(http_server PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(http_server PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(http_server PRIVATE ${TCP_SOURCES})
-target_sources(http_server PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
-target_sources(http_server PRIVATE ${HTTP_SOURCES})
-target_include_directories(http_server PUBLIC include)
+add_executable(httpServerTest test/httpServerTest.cpp)
+target_sources(httpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(httpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(httpServerTest PRIVATE ${BASEKIT_SOURCES})
+target_sources(httpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
+target_sources(httpServerTest PRIVATE ${HTTP_SOURCES})
+target_include_directories(httpServerTest PUBLIC include)
 
 # http client
-add_executable(http_client test/http_client.cpp)
-target_sources(http_client PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(http_client PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(http_client PRIVATE ${TCP_SOURCES})
-target_sources(http_client PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
-target_sources(http_client PRIVATE ${HTTP_SOURCES})
-target_include_directories(http_client PUBLIC include)
+add_executable(httpClientTest test/httpClientTest.cpp)
+target_sources(httpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(httpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(httpClientTest PRIVATE ${BASEKIT_SOURCES})
+target_sources(httpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
+target_sources(httpClientTest PRIVATE ${HTTP_SOURCES})
+target_include_directories(httpClientTest PUBLIC include)
 
-add_executable(logBuffer test/logBufferTest.cpp)
-target_sources(logBuffer PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
-target_sources(logBuffer PUBLIC FILE_SET CXX_MODULES FILES ${TCP_MODULES})
-target_sources(logBuffer PRIVATE ${TCP_SOURCES})
-target_include_directories(logBuffer PRIVATE include)
+add_executable(logBufferTest test/logBufferTest.cpp)
+target_sources(logBufferTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
+target_sources(logBufferTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
+target_sources(logBufferTest PRIVATE ${BASEKIT_SOURCES})
+target_include_directories(logBufferTest PRIVATE include)
