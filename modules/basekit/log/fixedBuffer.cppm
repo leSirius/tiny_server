@@ -40,7 +40,7 @@ public:
 
     void reset();
 
-    void toZero();
+    // void toZero();
 
 private:
     array<char, SIZE> bufData{};

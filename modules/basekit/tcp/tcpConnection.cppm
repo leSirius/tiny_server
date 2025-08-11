@@ -37,7 +37,7 @@ namespace basekit {
 
         void setCloseCB(CallBackType cb);
 
-        void setSendBuffer(string_view _buffer);
+        void appendToSendBuf(string_view _buffer);
 
         [[nodiscard]] const Buffer *getSendBuffer() const;
 
@@ -119,7 +119,6 @@ namespace basekit {
     }
 
     void ConnectionTCP::destructConnection() {
-        // println("{},  ConnectionTCP::destructConnection", currentThread::getTid());
         loop->deleteChannel(&channel);
     }
 
@@ -127,18 +126,18 @@ namespace basekit {
         // 这里可能会有 Disconnected 问题!!! 待检查解决
         assert(state==State::Connected);
         utils::errIf(state != State::Connected, "state is " + to_string(static_cast<int>(state)));
-        recvBuffer.clearBuf();
+        recvBuffer.retrieveAll();
         readNonBlock();
     }
 
     void ConnectionTCP::writeFromSBuf() {
         assert(state == State::Connected);
         writeNonBlock();
-        sendBuffer.clearBuf();
+        sendBuffer.retrieveAll();
     }
 
     void ConnectionTCP::sendMsg(const string_view msg) {
-        setSendBuffer(msg);
+        appendToSendBuf(msg);
         writeFromSBuf();
     }
 
@@ -170,36 +169,33 @@ namespace basekit {
 
     void ConnectionTCP::setCloseCB(CallBackType cb) { onCloseCB = std::move(cb); }
 
-    void ConnectionTCP::setSendBuffer(const string_view _buffer) { sendBuffer.setBuf(_buffer); }
+    void ConnectionTCP::appendToSendBuf(const string_view _buffer) { sendBuffer.append(_buffer); }
 
     const Buffer *ConnectionTCP::getSendBuffer() const { return &sendBuffer; }
 
     const Buffer *ConnectionTCP::getRecvBuffer() const { return &recvBuffer; }
 
-    string ConnectionTCP::getRecvContent() const { return getRecvBuffer()->c_str(); }
+    string ConnectionTCP::getRecvContent() const { return getRecvBuffer()->peekAllAsString(); }
 
     ConnectionTCP::State ConnectionTCP::getState() const { return state; }
 
     void ConnectionTCP::setState(const State _state) { state = _state; }
 
     void ConnectionTCP::readNonBlock() {
-        int sockFD = connFD;
+        const int sockFD = connFD;
         char buf[config::BUF_SIZE]{};
         while (true) {
             if (const auto bytesRead = read(sockFD, buf, sizeof(buf)); bytesRead > 0) {
                 recvBuffer.append(buf);
             } else if (bytesRead == 0) {
-                // println("read EOF, client fd {} disconnected", sockFD);
                 handleClose();
                 break;
             } else if (bytesRead == -1) {
                 if (errno == EINTR) {
-                    // println("EINTR, continue reading");
                     // continue;
                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     break;
                 } else {
-                    // println("Other error on client fd {}", sockFD);
                     handleClose();
                     break;
                 }
@@ -210,14 +206,13 @@ namespace basekit {
 
     void ConnectionTCP::writeNonBlock() {
         const auto sockFD = connFD;
-        const string buf{sendBuffer.c_str()};
+        const string buf{sendBuffer.peekAllAsString()};
         const auto dataSize = buf.size();
         auto dataLeft = dataSize;
         while (dataLeft > 0) {
             const auto bytesWrite = write(sockFD, buf.c_str() + dataSize - dataLeft, dataLeft);
             if (bytesWrite == -1) {
                 if (errno == EINTR) { continue; } else if (errno == EAGAIN) { break; } else {
-                    // println("Other error on connection writing , fd: {}", sockFD);
                     handleClose();
                     break;
                 }
@@ -240,9 +235,7 @@ namespace basekit {
         loop->runEvery(dur, cb);
     }
 
-    Timestamp ConnectionTCP::getLastActive() const {
-        return lastActive;
-    }
+    Timestamp ConnectionTCP::getLastActive() const { return lastActive; }
 
     void ConnectionTCP::updateLastActive(const Timestamp timestamp) {
         lastActive = timestamp;

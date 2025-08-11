@@ -15,8 +15,10 @@ void input(int socketFD) {
     Buffer sendBuffer, recvBuffer;
     constexpr int bufSize = config::BUF_SIZE;
     while (true) {
-        sendBuffer.getLineBuf();
-        const auto writeBytes = write(socketFD, sendBuffer.c_str(), sendBuffer.size());
+        string redundantBuf;
+        getline(cin, redundantBuf);
+        sendBuffer.append(redundantBuf);
+        const auto writeBytes = write(socketFD, sendBuffer.peekAllAsString().c_str(), sendBuffer.readableBytes());
         utils::errIf(writeBytes == -1, "client sending message error");
         ssize_t alreadyRead = 0;
         char buf[bufSize]{};
@@ -32,12 +34,12 @@ void input(int socketFD) {
                 utils::errIf(true, "client reached no man's land ");
             }
             if (alreadyRead >= writeBytes) {
-                println("message from server: {}", recvBuffer.c_str());
+                println("message from server: {}", recvBuffer.peekAllAsString());
                 break;
             }
             bzero(buf, sizeof(buf));
         }
-        recvBuffer.clearBuf();
+        recvBuffer.retrieveAll();
     }
 }
 

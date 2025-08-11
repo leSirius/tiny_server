@@ -1,5 +1,5 @@
 module;
-#include <assert.h>
+#include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <unistd.h>

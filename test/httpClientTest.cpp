@@ -36,7 +36,7 @@ void sendHttp(int socketFD) {
             }
             bzero(buf, sizeof(buf));
         }
-        recvBuffer.clearBuf();
+        recvBuffer.retrieveAll();
     }
 }
 

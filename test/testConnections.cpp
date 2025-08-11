@@ -25,29 +25,29 @@ void oneClient(const int msgs, const int wait) {
     sleep(wait);
     int count = 0;
     while (count < msgs) {
-        sendBuffer.setBuf("I'm client!");
+        sendBuffer.append("I'm client!");
         utils::errIf(
-            write(sockFD, sendBuffer.c_str(), sendBuffer.size()) == -1,
+            write(sockFD, sendBuffer.peekAllAsString().c_str(), sendBuffer.readableBytes()) == -1,
             "socket already disconnected, can't write any more!"
         );
 
-        int already_read = 0;
+        size_t already_read = 0;
         char buf[config::BUF_SIZE]{}; //这个buf大小无所谓
         while (true) {
-            if (const ssize_t read_bytes = read(sockFD, buf, sizeof(buf)); read_bytes > 0) {
+            if (const auto read_bytes = read(sockFD, buf, sizeof(buf)); read_bytes > 0) {
                 readBuffer.append(buf);
                 already_read += read_bytes;
             } else if (read_bytes == 0) {
                 printf("server disconnected!");
                 exit(EXIT_SUCCESS);
             }
-            if (already_read >= sendBuffer.size()) {
-                println("count: {}, message from server: {}", count++, readBuffer.c_str());
+            if (already_read >= sendBuffer.readableBytes()) {
+                println("count: {}, message from server: {}", count++, readBuffer.peekAllAsString());
                 break;
             }
             bzero(&buf, sizeof(buf));
         }
-        readBuffer.clearBuf();
+        readBuffer.retrieveAll();
     }
 }
 
