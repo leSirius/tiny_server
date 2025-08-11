@@ -56,7 +56,7 @@ namespace basekit {
 
     void Channel::handleEventWithGuard() const {
         if (readyEvents & (EPOLLIN | EPOLLPRI | EPOLLRDHUP) && readCallback) { readCallback(); }
-        if (readyEvents & EPOLLOUT &&writeCallback) { writeCallback(); }
+        if (readyEvents & EPOLLOUT && writeCallback) { writeCallback(); }
     }
 
     void Channel::tie(const shared_ptr<void> &ptr) {

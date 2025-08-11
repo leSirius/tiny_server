@@ -2,6 +2,8 @@ module;
 #include <cassert>
 #include <unistd.h>
 
+#include "logMacro.h"
+
 export module basekit:tcpConnection;
 import <cerrno>;
 import <functional>;
@@ -10,6 +12,7 @@ import config;
 import :socket;
 import :buffer;
 import :epollLoopChannel;
+import :logger;
 import :currentThread;
 import :timestamp;
 
@@ -48,6 +51,8 @@ namespace basekit {
         void sendMsg(string_view msg);
 
         void handleMessage();
+
+        void handleWrite();
 
         void handleClose();
 
@@ -100,6 +105,7 @@ namespace basekit {
         if (loop != nullptr) {
             channel.enableET();
             channel.setReadCallback([this]() { this->handleMessage(); });
+            channel.setWriteCallback([this]() { this->handleWrite(); });
         } else {
             utils::errIf(true, "null loop ptr while building connection");
         }
@@ -113,14 +119,10 @@ namespace basekit {
         setState(State::Connected);
         channel.tie(shared_from_this());
         channel.enableRead();
-        if (onConnectCB) {
-            onConnectCB(shared_from_this());
-        }
+        if (onConnectCB) { onConnectCB(shared_from_this()); }
     }
 
-    void ConnectionTCP::destructConnection() {
-        loop->deleteChannel(&channel);
-    }
+    void ConnectionTCP::destructConnection() { loop->deleteChannel(&channel); }
 
     void ConnectionTCP::readToRBuf() {
         // 这里可能会有 Disconnected 问题!!! 待检查解决
@@ -133,12 +135,6 @@ namespace basekit {
     void ConnectionTCP::writeFromSBuf() {
         assert(state == State::Connected);
         writeNonBlock();
-        sendBuffer.retrieveAll();
-    }
-
-    void ConnectionTCP::sendMsg(const string_view msg) {
-        appendToSendBuf(msg);
-        writeFromSBuf();
     }
 
     void ConnectionTCP::handleMessage() {
@@ -146,6 +142,11 @@ namespace basekit {
         if (onMessageCB) { onMessageCB(shared_from_this()); } else {
             utils::errIf(true, "null handleMessageCB in Connection");
         }
+    }
+
+    void ConnectionTCP::handleWrite() {
+        LOG_INFO << "TcpConnection::HandleWrite";
+        writeNonBlock();
     }
 
     void ConnectionTCP::handleClose() {
@@ -205,19 +206,38 @@ namespace basekit {
     }
 
     void ConnectionTCP::writeNonBlock() {
-        const auto sockFD = connFD;
-        const string buf{sendBuffer.peekAllAsString()};
-        const auto dataSize = buf.size();
-        auto dataLeft = dataSize;
-        while (dataLeft > 0) {
-            const auto bytesWrite = write(sockFD, buf.c_str() + dataSize - dataLeft, dataLeft);
-            if (bytesWrite == -1) {
-                if (errno == EINTR) { continue; } else if (errno == EAGAIN) { break; } else {
-                    handleClose();
-                    break;
-                }
+        int sendSize = static_cast<int>(write(connFD, sendBuffer.peek(), sendBuffer.readableBytes()));
+        if (sendSize == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            sendSize = 0;
+        } else if (sendSize == -1) {
+            LOG_ERROR << "TcpConnection::Send - TcpConnection Send ERROR";
+        }
+        sendBuffer.retrieve(sendSize);
+    }
+
+    void ConnectionTCP::sendMsg(const string_view msg) {
+        const auto len = msg.size();
+        int remaining = len;
+        int sendSize{0};
+        // 如果此时send_buf_中没有数据，则可以先尝试发送数据
+        if (sendBuffer.readableBytes() == 0) {
+            sendSize = static_cast<int>(write(connFD, msg.data(), len));
+            if (sendSize >= 0) {
+                remaining -= sendSize;
+            } else if (sendSize == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+                sendSize = 0;
+            } else {
+                LOG_ERROR << "TcpConnection::Send - TcpConnection Send ERROR";
+                return;
             }
-            dataLeft -= bytesWrite;
+        }
+        assert(remaining <= len);
+        if (remaining > 0) {
+            sendBuffer.append(msg.substr(sendSize, remaining));
+            // 到达这一步时
+            // 1. 还没有监听写事件，在此时进行了监听
+            // 2. 监听了写事件，并且已经触发了，此时再次监听，强制触发一次，如果强制触发失败，仍然可以等待后续TCP缓冲区可写。
+            channel.enableWrite();
         }
     }
 
@@ -237,7 +257,5 @@ namespace basekit {
 
     Timestamp ConnectionTCP::getLastActive() const { return lastActive; }
 
-    void ConnectionTCP::updateLastActive(const Timestamp timestamp) {
-        lastActive = timestamp;
-    }
+    void ConnectionTCP::updateLastActive(const Timestamp timestamp) { lastActive = timestamp; }
 }

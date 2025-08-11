@@ -122,7 +122,8 @@ namespace http {
     void HttpServer::activeCloseConn(const weak_ptr<ConnectionTCP> &connection) {
         if (const TcpConnectionPtr conn = connection.lock()) {
             if (conn->getLastActive() + config::AUTO_CLOSE_TIME < Timestamp::getNow()) {
-                println("timer close {} timeout {}", conn->getFD(), config::AUTO_CLOSE_TIME);
+                LOG_INFO << "Timer close fd:" << conn->getFD() <<
+                    " timeout: " << config::AUTO_CLOSE_TIME.count() << "s";
                 conn->handleClose();
             } else {
                 conn->runAfter(config::AUTO_CLOSE_TIME, [this, connection] { this->activeCloseConn(connection); });
