@@ -1,4 +1,5 @@
 module;
+#include <unistd.h>
 #include <sys/socket.h>
 #include "logMacro.h"
 
@@ -108,12 +109,25 @@ namespace http {
 
     void HttpServer::onRequest(ConnectionTCP::CallbackParam conn, const HttpRequest &request) const {
         const auto connState = request.getHeader("Connection").value_or("");
-        const bool close = equalIgnoreCase(connState, "close") ||
-                           (request.getVersion() == HttpRequest::Version::Http10 &&
-                            !equalIgnoreCase(connState, "keep-alive"));
-        HttpResponse response(close);
+        const bool closeConn = equalIgnoreCase(connState, "close") ||
+                               (request.getVersion() == HttpRequest::Version::Http10 && !equalIgnoreCase(
+                                    connState, "keep-alive"));
+        HttpResponse response(closeConn);
         respCallback(request, &response);
-        conn->sendMsg(response.toString());
+
+        if (response.getBodyType() == HttpResponse::HttpBodyType::HTML_TYPE) {
+            const auto temp = response.getMessage();
+            conn->sendMsg(std::move(temp));
+        } else {
+            conn->sendMsg(response.beforeBody());
+            conn->sendFile(response.getFileFD(), response.getContentLength());
+            if (const int ret = close(response.getFileFD()); ret == -1) {
+                LOG_ERROR << "Close File Error";
+            } else {
+                LOG_INFO << "Close File Ok";
+            }
+        }
+
         if (response.isCloseConnection()) { conn->handleClose(); }
     }
 

@@ -1,6 +1,7 @@
 module;
 #include <cassert>
 #include <unistd.h>
+#include <sys/sendfile.h>
 
 #include "logMacro.h"
 
@@ -49,6 +50,8 @@ namespace basekit {
         [[nodiscard]] string getRecvContent() const;
 
         void sendMsg(string_view msg);
+
+        void sendFile(int fileFd, int size) const;
 
         void handleMessage();
 
@@ -238,6 +241,23 @@ namespace basekit {
             // 1. 还没有监听写事件，在此时进行了监听
             // 2. 监听了写事件，并且已经触发了，此时再次监听，强制触发一次，如果强制触发失败，仍然可以等待后续TCP缓冲区可写。
             channel.enableWrite();
+        }
+    }
+
+    void ConnectionTCP::sendFile(const int fileFd, const int size) const {
+        ssize_t sendSize = 0;
+        const auto dataSize = static_cast<ssize_t>(size);
+        // 一次性把文件写完，虽然肯定不行。
+        while (sendSize < dataSize) {
+            const auto bytesWrite = sendfile(connFD, fileFd, &sendSize, dataSize - sendSize);
+            if (bytesWrite == -1) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) { continue; }
+                // else {
+                //     // continue;
+                //      break;
+                // }
+            }
+            sendSize += bytesWrite;
         }
     }
 

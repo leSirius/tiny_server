@@ -14,6 +14,10 @@ vector<string> testCases = {
     "Host: www.httptest.com\r\n"
     "Connection: close\r\n"
     "\r\n",
+    "GET /hello HTTP/1.1\r\n"
+    "Host: www.httptest.com\r\n"
+    "Connection: close\r\n"
+    "\r\n",
 };
 
 void sendHttp(int socketFD) {

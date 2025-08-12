@@ -26,21 +26,15 @@ namespace config {
     export constexpr int64_t FileMaximumSize = 1024 * 1024 * 1024;
 
 
-    string exePath{};
+    static string exePath{};
 
-    const string &getExeDirPath() {
+    export const string &getExeDirPath() {
         if (exePath.empty()) {
             char path[PATH_MAX];
             const auto count = readlink("/proc/self/exe", path, PATH_MAX);
-            assert(count!=-1);
-            auto split{count - 1};
-            for (auto i = count - 1; i >= 0; i--) {
-                if (path[i] == '/') {
-                    split = i;
-                    break;
-                }
-            }
-            exePath = string(path, split);
+            assert(count != -1);
+            const filesystem::path fullPath(string(path, count));
+            exePath = fullPath.parent_path().string();
         }
         return exePath;
     }
