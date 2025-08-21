@@ -37,6 +37,12 @@ set(BASEKIT_MODULES
         modules/basekit/log/asynclog.cppm
         modules/basekit/log/logfile.cppm
         modules/basekit/thread/current_thread.cppm
+
+        modules/basekit/http/httpRequest.cppm
+        #        modules/basekit/http/httpParser_discard.cppm
+        modules/basekit/http/httpResponse.cppm
+        modules/basekit/http/httpServer.cppm
+        modules/basekit/http/httpParser.cppm
 )
 
 # Define common private sources
@@ -46,15 +52,9 @@ set(BASEKIT_SOURCES
         modules/basekit/tcp/channel.cpp
         modules/basekit/thread/current_thread.cpp
         modules/basekit/timer/timerQueue.cpp
+        modules/basekit/http/httpParser.cpp
 )
 
-set(HTTP_MODULES
-        modules/http/http.cppm
-        modules/http/httpRequest.cppm
-        modules/http/httpParser.cppm
-        modules/http/httpResponse.cppm
-        modules/http/httpServer.cppm
-)
 
 # Tiny Server
 add_executable(tcpServerTest test/tcpServerTest.cpp)
@@ -83,8 +83,6 @@ add_executable(httpParseTest test/httpParseTest.cpp)
 target_sources(httpParseTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
 target_sources(httpParseTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
 target_sources(httpParseTest PRIVATE ${BASEKIT_SOURCES})
-target_sources(httpParseTest PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
-target_sources(httpParseTest PRIVATE ${HTTP_SOURCES})
 target_include_directories(httpParseTest PUBLIC include)
 
 # http server
@@ -92,8 +90,6 @@ add_executable(httpServerTest test/httpServerTest.cpp)
 target_sources(httpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
 target_sources(httpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
 target_sources(httpServerTest PRIVATE ${BASEKIT_SOURCES})
-target_sources(httpServerTest PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
-target_sources(httpServerTest PRIVATE ${HTTP_SOURCES})
 target_include_directories(httpServerTest PUBLIC include)
 
 # http client
@@ -101,8 +97,6 @@ add_executable(httpClientTest test/httpClientTest.cpp)
 target_sources(httpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${GENERAL_MODULES})
 target_sources(httpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${BASEKIT_MODULES})
 target_sources(httpClientTest PRIVATE ${BASEKIT_SOURCES})
-target_sources(httpClientTest PUBLIC FILE_SET CXX_MODULES FILES ${HTTP_MODULES})
-target_sources(httpClientTest PRIVATE ${HTTP_SOURCES})
 target_include_directories(httpClientTest PUBLIC include)
 
 add_executable(logBufferTest test/logBufferTest.cpp)

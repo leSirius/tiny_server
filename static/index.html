@@ -13,8 +13,11 @@
 <div>
     <table>
         <!--filelist-->
-
     </table>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" id="fileInput" accept=".txt,.pdf,.doc,.docx,.jpg,.png">
+        <button type="submit">上传文件</button>
+    </form>
 </div>
 
 </body>

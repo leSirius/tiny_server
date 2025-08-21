@@ -1,18 +1,20 @@
 module;
+
 #include <unistd.h>
 #include <sys/socket.h>
 #include "logMacro.h"
 
-export module http:httpServer;
+export module basekit:httpServer;
 import <chrono>;
+import  <fstream>;
 import <functional>;
 import <iostream>;
 import <memory>;
 
-import basekit;
 import config;
-import :httpRequest;
 import :httpResponse;
+import :tcpConnection;
+import :tcpServer;
 import :httpParser;
 
 namespace http {
@@ -51,14 +53,13 @@ namespace http {
         HttpResponseCallback respCallback;
     };
 
-    HttpServer::HttpServer(const string_view _ip, const int _port, const int _thdNum)
-        : server(_ip, _port, _thdNum) {
+    HttpServer::HttpServer(const string_view _ip, const int _port, const int _thdNum): server(_ip, _port, _thdNum) {
         LOG_INFO << "listening on " << _ip << ":" << _port;
         server.setConnectCB([this](ConnectionTCP::CallbackParam conn) { this->onConnection(conn); });
         server.setMessageCB([this](ConnectionTCP::CallbackParam conn) { this->onMessage(conn); });
-        setHttpCallback([](const HttpRequest &req, HttpResponse *resp) {
-            httpDefaultCallBack(req, resp);
-        });
+        setHttpCallback(
+            [](const HttpRequest &req, HttpResponse *resp) { httpDefaultCallBack(req, resp); }
+        );
     }
 
     void HttpServer::httpDefaultCallBack(const HttpRequest &req, HttpResponse *resp) {
@@ -87,11 +88,14 @@ namespace http {
 
     void HttpServer::onMessage(ConnectionTCP::CallbackParam conn) const {
         if (conn->getState() == ConnectionTCP::State::Connected) {
-            if (const auto req = parseHttpReq(conn->getRecvContent()); req.has_value()) {
-                onRequest(conn, req.value());
-            } else {
+            if (autoClose) { conn->updateLastActive(Timestamp::getNow()); }
+            auto &parser = conn->getHttpParser();
+            if (!parser.rollingParse(conn->getRecvContent())) {
                 conn->sendMsg("HTTP/1.1 400 Bad Request\r\n\r\n");
                 conn->handleClose();
+            }
+            if (const auto req = parser.tryExtractReset(); req.has_value()) {
+                onRequest(conn, *req.value());
             }
         }
     }
@@ -112,12 +116,35 @@ namespace http {
         const bool closeConn = equalIgnoreCase(connState, "close") ||
                                (request.getVersion() == HttpRequest::Version::Http10 && !equalIgnoreCase(
                                     connState, "keep-alive"));
+
+        if (request.getHeader("Content-Type").value_or("").find("multipart/form-data") != std::string::npos) {
+            const auto typeStr = request.getHeader("Content-Type").value();
+            auto boundary = typeStr.substr(
+                typeStr.find("boundary") + string("boundary=").size()
+            );
+            string fileMessage = request.getBody();
+            auto beginInd = fileMessage.find("filename");
+            if (beginInd == string::npos) {
+                LOG_ERROR << "cant find filename";
+                return;
+            }
+            beginInd += string("filename=\"").size();
+            auto endInd = fileMessage.find("\"\r\n", beginInd);
+            auto filename = fileMessage.substr(beginInd, endInd - beginInd);
+
+            beginInd = fileMessage.find("\r\n\r\n") + 4;
+            endInd = fileMessage.find(string("--") + boundary + "--");
+            string filedata = fileMessage.substr(beginInd, endInd - beginInd);
+            ofstream ofs(config::filePath + filename,
+                         ios::out | ios::app | ios::binary);
+            ofs.write(filedata.data(), filedata.size());
+            ofs.close();
+        }
+
         HttpResponse response(closeConn);
         respCallback(request, &response);
-
         if (response.getBodyType() == HttpResponse::HttpBodyType::HTML_TYPE) {
-            const auto temp = response.getMessage();
-            conn->sendMsg(std::move(temp));
+            conn->sendMsg(response.getMessage());
         } else {
             conn->sendMsg(response.beforeBody());
             conn->sendFile(response.getFileFD(), response.getContentLength());

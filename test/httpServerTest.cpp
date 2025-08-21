@@ -1,7 +1,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
+#include <format>
 #include "logMacro.h"
 
 import <chrono>;
@@ -12,17 +12,14 @@ import <iostream>;
 import <string>;
 import <thread>;
 
-
 import config;
-import http;
 import basekit;
 
 
 using namespace std;
 using namespace http;
 
-const string staticPath = "/tmp/tmp.UveHWpFlDa/tiny_server/static/";
-const string downloadPath = staticPath + "download/";
+const string downloadPath = config::filePath;
 const string fileListSlot = "<!--filelist-->";
 
 string readFile(const string_view path) {
@@ -69,7 +66,7 @@ void downloadFile(const string &filename, HttpResponse *response) {
 
 void removeFile(const string &filename) {
     if (const int ret = remove(string(downloadPath + filename).c_str()); ret != 0) {
-        LOG_ERROR << "删除文件 " << filename << " 失败";
+        LOG_WARN << "删除文件 " << filename << " 失败";
     }
 }
 
@@ -77,7 +74,7 @@ void HttpResponseCallback(const HttpRequest &request, HttpResponse *response) {
     const string url = request.getUrl();
     if (request.getMethod() == HttpRequest::Method::GET) {
         if (url == "/") {
-            string templateHtml = readFile(staticPath + "index.html");
+            string templateHtml = readFile(config::staticPath + "index.html");
             const auto hydrateHtml = templateHtml.replace(
                 templateHtml.find(fileListSlot), fileListSlot.size(), getFileList()
             );
@@ -100,6 +97,10 @@ void HttpResponseCallback(const HttpRequest &request, HttpResponse *response) {
             downloadFile(url.substr(10), response);
         } else if (url.substr(0, 7) == "/delete") {
             removeFile(url.substr(8));
+            response->setStatusCode(HttpResponse::HttpStatusCode::TempMoved);
+            response->setStatusMessage("Moved Temporarily");
+            response->setContentType("text/html");
+            response->addHeader("Location", "/");
         } else {
             response->setStatusCode(HttpResponse::HttpStatusCode::NotFound);
             response->setStatusMessage("Not Found");
@@ -111,13 +112,19 @@ void HttpResponseCallback(const HttpRequest &request, HttpResponse *response) {
             const string &reqBody = request.getBody();
             int usernamePos = reqBody.find("username=");
             int passwordPos = reqBody.find("password=");
+            if (usernamePos == -1 || passwordPos == -1) {
+                response->setStatusCode(HttpResponse::HttpStatusCode::BadRequest);
+                response->setStatusMessage("Invalid Username/Password");
+                response->setBody("Sorry Not Found\n");
+                response->setCloseConnection(true);
+                return;
+            }
             usernamePos += 9;
             passwordPos += 9;
             const size_t usernameEndPos = reqBody.find('&', usernamePos);
             const size_t passwordEndPos = reqBody.length();
             const string username = reqBody.substr(usernamePos, usernameEndPos - usernamePos);
             const string password = reqBody.substr(passwordPos, passwordEndPos - passwordPos);
-
             LOG_INFO << username + " " + password;
             if (username == "sirius" && password == "123456") {
                 response->setBody(username + " login ok!\n");
@@ -127,6 +134,11 @@ void HttpResponseCallback(const HttpRequest &request, HttpResponse *response) {
             response->setStatusCode(HttpResponse::HttpStatusCode::OK);
             response->setStatusMessage("OK");
             response->setContentType("text/plain");
+        } else if (url == "/upload") {
+            response->setStatusCode(HttpResponse::HttpStatusCode::TempMoved);
+            response->setStatusMessage("Moved Temporarily");
+            response->setContentType("text/html");
+            response->addHeader("Location", "/");
         }
     }
 }

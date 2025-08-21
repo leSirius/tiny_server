@@ -1,69 +1,52 @@
 module;
 
-export module http:httpParser;
-import <iostream>;
-import  <string_view>;
 
+module basekit;
 import :httpRequest;
+import <iostream>;
+import <memory>;
+import <ranges>;
+import <unordered_map>;
 
+import :httpParser;
 using namespace std;
 
 namespace http {
-    export optional<HttpRequest> parseHttpReq(const std::string_view httpText);
+    // unique_ptr<HttpRequest> parseRequest(const string_view httpText) {
+    //     HttpParser parser;
+    //     if (const auto rst = parser.rollingParse(httpText); rst) {
+    //         return parser.moveRequest();
+    //     } else {
+    //         return nullptr;
+    //     }
+    // }
 
-    enum class ParseState {
-        Invalid, // 无效
-        InvalidMethod, // 无效请求方法
-        InvalidUrl, // 无效请求路径
-        InvalidVersion, // 无效的协议版本号
-        InvalidHeader, // 无效请求头
-        Start, // 解析开始
-        Method, // 请求方法
-        BeforeUrl, // 请求连接前的状态，需要'/'开头
-        InUrl, // url处理
-        BeforeUrlParamKey, // URL请求参数键之前
-        UrlParamKey, // URL请求参数键    10
-        BeforeUrlParamValue, // URL请求参数值之前
-        UrlParamValue, // URL请求参数值
-        BeforeProtocol, // 协议解析之前
-        Protocol, // 协议
-        BeforeVersion, // 版本开始前
-        Version, // 版本
-        // Header,
-        HeaderKey,
-        // HeaderBeforeColon, // 请求头冒号之前
-        HeaderAfterColon, // 请求头冒号
-        HeaderValue, // 请求值
-        WhenCr, // 遇到一个回车   20
-        CrLf, // 回车换行
-        CrLfCr, // 回车换行之后的状态
-        Body, // 请求体
-        Complete // 完成
-    };
+    HttpParser::HttpParser(): request(make_unique<HttpRequest>()), state(ParseState::Start) {
+    }
 
-    constexpr char CR{'\r'};
-    constexpr char LF{'\n'};
+    HttpParser::~HttpParser() = default;
 
-    optional<HttpRequest> parseHttpReq(const std::string_view httpText) {
+    bool HttpParser::rollingParse(const string_view httpText) {
         int scanPos = 0;
+        const auto totalSize = httpText.size();
         int segStart{scanPos};
         int colonOrEqual{};
         int headerValueBegin{};
-        auto state = ParseState::Start;
-        HttpRequest request{};
 
-        const auto setState = [&state](const ParseState s) { state = s; };
-        const auto inRange = [&scanPos, &httpText] { return scanPos < httpText.size(); };
+        const auto inRange = [&scanPos, totalSize] { return scanPos < totalSize; };
         const auto emptyChar = [](const char c) { return isblank(c) || c == CR || c == LF; };
         const auto sliceText = [&httpText](const int begin, const int end) {
-            return httpText.substr(begin, end - begin);
+            auto sub = httpText.substr(begin, end - begin);
+            auto filtered = sub | views::filter([](const unsigned char ch) {
+                // safari 浏览器会向请求头插入这个字符，滤掉
+                return static_cast<int>(ch) != 28;
+            });
+            return ranges::to<string>(filtered);
         };
 
-        while (scanPos < httpText.size() && state != ParseState::Invalid &&
-               state != ParseState::InvalidMethod && state != ParseState::InvalidUrl &&
-               state != ParseState::InvalidHeader && state != ParseState::InvalidVersion &&
-               state != ParseState::Complete && inRange()
-        ) {
+        while (state != ParseState::Invalid && state != ParseState::InvalidMethod &&
+               state != ParseState::InvalidUrl && state != ParseState::InvalidHeader &&
+               state != ParseState::InvalidVersion && state != ParseState::Complete && inRange()) {
             const char &ch = httpText[scanPos];
 
             switch (state) {
@@ -79,7 +62,7 @@ namespace http {
                     if (isblank(ch)) {
                         if (const auto matchMethod = HttpRequest::stringToMethod(sliceText(segStart, scanPos));
                             matchMethod != HttpRequest::Method::INVALID) {
-                            request.setMethod(matchMethod);
+                            request->setMethod(matchMethod);
                             setState(ParseState::BeforeUrl);
                         } else {
                             setState(ParseState::InvalidMethod);
@@ -98,10 +81,10 @@ namespace http {
 
                 case ParseState::InUrl:
                     if (isblank(ch)) {
-                        request.setUrl(string(sliceText(segStart, scanPos)));
+                        request->setUrl(sliceText(segStart, scanPos));
                         setState(ParseState::BeforeProtocol);
                     } else if (ch == '?') {
-                        request.setUrl(string(sliceText(segStart, scanPos)));
+                        request->setUrl(sliceText(segStart, scanPos));
                         setState(ParseState::BeforeUrlParamKey);
                     }
                     break;
@@ -132,15 +115,15 @@ namespace http {
 
                 case ParseState::UrlParamValue:
                     if (ch == '&') {
-                        request.addUrlParam(
-                            string(sliceText(segStart, colonOrEqual)),
-                            string(sliceText(colonOrEqual + 1, scanPos))
+                        request->addUrlParam(
+                            sliceText(segStart, colonOrEqual),
+                            sliceText(colonOrEqual + 1, scanPos)
                         );
                         setState(ParseState::BeforeUrlParamKey);
                     } else if (isblank(ch)) {
-                        request.addUrlParam(
-                            string(sliceText(segStart, colonOrEqual)),
-                            string(sliceText(colonOrEqual + 1, scanPos))
+                        request->addUrlParam(
+                            sliceText(segStart, colonOrEqual),
+                            sliceText(colonOrEqual + 1, scanPos)
                         );
                         setState(ParseState::BeforeProtocol);
                     }
@@ -156,7 +139,7 @@ namespace http {
 
                 case ParseState::Protocol:
                     if (ch == '/') {
-                        request.setProtocol(string(sliceText(segStart, scanPos)));
+                        request->setProtocol(sliceText(segStart, scanPos));
                         setState(ParseState::BeforeVersion);
                     }
                     break;
@@ -179,11 +162,10 @@ namespace http {
                                                  : verString == "1.1"
                                                        ? HttpRequest::Version::Http11
                                                        : HttpRequest::Version::Invalid;
-                        request.setVersion(version);
+                        request->setVersion(version);
                         if (version != HttpRequest::Version::Invalid) {
                             setState(ParseState::WhenCr);
                         } else {
-                            // println("invalid version: {}", sliceText(segStart, scanPos));
                             setState(ParseState::InvalidVersion);
                         }
                     }
@@ -210,14 +192,19 @@ namespace http {
 
                 case ParseState::CrLfCr:
                     if (ch == LF) {
-                        if (auto conLen = request.getHeader("Content-Length");
-                            stoi(conLen.value_or("0")) > 0) {
+                        if (auto conLen = request->getHeader("Content-Length");
+                            stoi(conLen.value_or("0")) > 0
+                        ) {
                             setState(ParseState::Body);
+                            segStart = scanPos + 1;
                         } else {
                             setState(ParseState::Complete);
                         }
                     } else {
                         if (scanPos < httpText.size()) {
+                            // 这里scanPos已经指向了Body的第一个字符，如果Body只有一个字符，那Body状态就不会处理了，暂且减1
+                            segStart = scanPos;
+                            scanPos -= 1;
                             setState(ParseState::Body);
                         } else {
                             setState(ParseState::Complete);
@@ -242,20 +229,26 @@ namespace http {
                     break;
 
                 case ParseState::HeaderValue:
-                    //  if (isblank(ch)) { setState(ParseState::Invalid); }
                     if (ch == CR) {
-                        request.addheader(
-                            string(sliceText(segStart, colonOrEqual)),
-                            string(sliceText(headerValueBegin, scanPos))
+                        request->addheader(
+                            sliceText(segStart, colonOrEqual),
+                            sliceText(headerValueBegin, scanPos)
                         );
                         setState(ParseState::WhenCr);
                     }
                     break;
 
                 case ParseState::Body:
-                    request.setBody(string(sliceText(scanPos, httpText.size())));
-                    setState(ParseState::Complete);
+                    // 进入此分支时需要保证scanPos指向body第一个字符（也该是segStart的位置），并仅触发一次此分支
+                    request->setBody(sliceText(segStart, totalSize));
+                    if (totalSize - segStart >=
+                        stoi(request->getHeader("Content-Length").value_or("0"))
+                    ) {
+                        setState(ParseState::Complete);
+                    }
+                    scanPos = totalSize - 1;
                     break;
+
                 case ParseState::Invalid:
                     break;
                 case ParseState::InvalidMethod:
@@ -271,9 +264,33 @@ namespace http {
             }
             scanPos += 1;
         }
-        if (state == ParseState::Complete) {
-            return request;
-        }
-        return nullopt;
+        return !fallIntoInvalid();
+    }
+
+    unique_ptr<HttpRequest> HttpParser::moveRequest() {
+        auto another = make_unique<HttpRequest>();
+        std::swap(request, another);
+        return std::move(another);
+    }
+
+    optional<unique_ptr<HttpRequest> > HttpParser::tryExtractReset() {
+        if (state != ParseState::Complete) { return nullopt; }
+        setState(ParseState::Start);
+        auto newPtr = make_unique<HttpRequest>();
+        request.swap(newPtr);
+        return std::move(newPtr);
+    }
+
+    void HttpParser::resetState() {
+        setState(ParseState::Start);
+        request = nullptr;
+    }
+
+    void HttpParser::setState(const ParseState s) { state = s; }
+
+    bool HttpParser::fallIntoInvalid() const {
+        return state == ParseState::Invalid || state == ParseState::InvalidMethod ||
+               state == ParseState::InvalidUrl || state == ParseState::InvalidHeader ||
+               state == ParseState::InvalidVersion;
     }
 }

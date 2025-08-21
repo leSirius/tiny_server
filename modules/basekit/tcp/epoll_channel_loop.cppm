@@ -66,8 +66,7 @@ namespace basekit {
         template<typename Rep, typename Period>
         void runEvery(chrono::duration<Rep, Period> dur, const std::function<void()> &cb) const;
 
-    private
-    :
+    private:
         unique_ptr<Epoll> poller{};
         bool quit{false};
         vector<function<void()> > toDoList;

@@ -1,6 +1,6 @@
 module;
 
-export module http:httpResponse;
+export module basekit:httpResponse;
 import <string>;
 import <unordered_map>;
 

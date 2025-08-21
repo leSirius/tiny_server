@@ -4,6 +4,8 @@ module;
 #include <unistd.h>
 #include <sys/timerfd.h>
 
+#include "logMacro.h"
+
 module basekit;
 
 import <chrono>;
@@ -35,13 +37,13 @@ namespace basekit {
 
     void TimerQueue::createTimerFD() {
         timerFD = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
-        utils::errIf(timerFD<0, "TimerQueue::CreateTimerfd error");
+        utils::errIf(timerFD < 0, "TimerQueue::CreateTimerfd error");
     }
 
     void TimerQueue::readTimerFd() const {
         uint64_t content;
         if (const ssize_t readBytes = read(timerFD, &content, sizeof(content)); readBytes != sizeof(content)) {
-            println("TimerQueue::ReadTimerFd read error");
+            LOG_ERROR << "TimerQueue::ReadTimerFd read error";
         }
     }
 

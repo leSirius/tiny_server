@@ -24,8 +24,8 @@ namespace config {
     export constexpr int BufferWriteInterval = 3;
     export constexpr int FlushInterval = 3;
     export constexpr int64_t FileMaximumSize = 1024 * 1024 * 1024;
-
-
+    export const string staticPath = "/tmp/tmp.UveHWpFlDa/tiny_server/static/";
+    export const string filePath = staticPath + "download/";
     static string exePath{};
 
     export const string &getExeDirPath() {

@@ -13,6 +13,7 @@ import config;
 import :socket;
 import :buffer;
 import :epollLoopChannel;
+import :httpParser;
 import :logger;
 import :currentThread;
 import :timestamp;
@@ -45,9 +46,9 @@ namespace basekit {
 
         [[nodiscard]] const Buffer *getSendBuffer() const;
 
-        [[nodiscard]] const Buffer *getRecvBuffer() const;
+        [[nodiscard]] Buffer *getRecvBuffer();
 
-        [[nodiscard]] string getRecvContent() const;
+        [[nodiscard]] string getRecvContent();
 
         void sendMsg(string_view msg);
 
@@ -79,7 +80,10 @@ namespace basekit {
 
         void updateLastActive(Timestamp timestamp);
 
+        http::HttpParser &getHttpParser();
+
     private:
+        // tcpConnection 应该持有socket对象，RAII，防止串话
         int connFD;
         int connID;
         State state{State::Invalid};
@@ -91,6 +95,7 @@ namespace basekit {
         CallBackType onMessageCB;
         CallBackType onCloseCB;
         Timestamp lastActive;
+        http::HttpParser httpParser{};
 
         void setState(State _state);
 
@@ -177,9 +182,9 @@ namespace basekit {
 
     const Buffer *ConnectionTCP::getSendBuffer() const { return &sendBuffer; }
 
-    const Buffer *ConnectionTCP::getRecvBuffer() const { return &recvBuffer; }
+    Buffer *ConnectionTCP::getRecvBuffer() { return &recvBuffer; }
 
-    string ConnectionTCP::getRecvContent() const { return getRecvBuffer()->peekAllAsString(); }
+    string ConnectionTCP::getRecvContent() { return getRecvBuffer()->retrieveAllAsString(); }
 
     ConnectionTCP::State ConnectionTCP::getState() const { return state; }
 
@@ -278,4 +283,6 @@ namespace basekit {
     Timestamp ConnectionTCP::getLastActive() const { return lastActive; }
 
     void ConnectionTCP::updateLastActive(const Timestamp timestamp) { lastActive = timestamp; }
+
+    http::HttpParser &ConnectionTCP::getHttpParser() { return httpParser; }
 }
